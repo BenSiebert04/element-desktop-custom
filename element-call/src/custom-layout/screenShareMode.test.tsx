@@ -14,12 +14,17 @@ import { type LocalVideoTrack } from "livekit-client";
 import {
   applyScreenShareMode,
   currentScreenShareMode,
+  screenShareAudio,
   screenShareMode,
+  withScreenShareAudio,
   withScreenShareMode,
 } from "./screenShareMode";
 import { ScreenShareModeButton } from "./ScreenShareModeButton";
 
-afterEach(() => screenShareMode.setValue("standard"));
+afterEach(() => {
+  screenShareMode.setValue("standard");
+  screenShareAudio.setValue(true);
+});
 
 const capture = { selfBrowserSurface: "include" as const };
 
@@ -144,6 +149,40 @@ describe("screen sharing modes", () => {
     } as unknown as LocalVideoTrack;
     await applyScreenShareMode(track, "readability");
     expect(track.setDegradationPreference).toHaveBeenCalled();
+  });
+});
+
+describe("sharing the sound", () => {
+  it("asks for the sound with the screen, or explicitly not", () => {
+    const audio = { autoGainControl: false };
+    expect(withScreenShareAudio({ audio }, true)).toEqual({
+      audio,
+      systemAudio: "include",
+    });
+    expect(withScreenShareAudio({ audio }, false)).toEqual({
+      audio: false,
+      systemAudio: "exclude",
+    });
+  });
+
+  it("is on by default and can be switched off in the menu", async () => {
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider>
+        <ScreenShareModeButton size="lg" enabled={false} onClick={() => {}} />
+      </TooltipProvider>,
+    );
+    await user.click(screen.getByTestId("screen-share-mode-button"));
+    const toggle = screen.getByRole("menuitemcheckbox", {
+      name: "Share audio",
+    });
+    expect(toggle).toBeChecked();
+    await user.click(toggle);
+    expect(screenShareAudio.getValue()).toBe(false);
+    // The menu stays open
+    expect(
+      screen.getByRole("menuitemcheckbox", { name: "Share audio" }),
+    ).not.toBeChecked();
   });
 });
 

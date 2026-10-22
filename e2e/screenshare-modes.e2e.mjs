@@ -8,6 +8,7 @@
 //    again: full capture resolution, resolution kept (maintain-resolution),
 //    content hint "text"
 //  - Ben still receives the screen share
+//  - "Share audio" decides whether the sound is requested with the screen
 //
 // Usage: node e2e/screenshare-modes.e2e.mjs   (backend from e2e/start.sh running)
 
@@ -35,6 +36,13 @@ function hookPeerConnections() {
         return pc;
     };
     window.RTCPeerConnection.prototype = Original.prototype;
+    // Record what the app asks getDisplayMedia for
+    window.__displayMedia = [];
+    const getDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getDisplayMedia = (options) => {
+        window.__displayMedia.push(JSON.parse(JSON.stringify(options ?? {})));
+        return getDisplayMedia(options);
+    };
 }
 
 async function client(name) {
@@ -149,8 +157,21 @@ try {
     assert.equal(await a.getByTestId("screen-share-mode-readability").getAttribute("aria-checked"), "true");
     await a.waitForTimeout(800); // menu animation
     await a.screenshot({ path: path.join(RESULTS, "screenshare-mode-menu.png") });
-    await a.keyboard.press("Escape");
     log("OK mode menu shows the current mode");
+
+    // Sound: asked for by default, not after switching it off
+    let asked = await a.evaluate(() => window.__displayMedia.at(-1));
+    assert.ok(asked.audio, "sound requested by default");
+    assert.equal(asked.systemAudio, "include");
+    await a.getByRole("menuitemcheckbox", { name: "Share audio" }).click();
+    await a.keyboard.press("Escape");
+    await a.getByRole("switch", { name: "Sharing screen" }).click(); // stop
+    await a.getByRole("switch", { name: "Share screen" }).click(); // share again
+    await a.getByRole("switch", { name: "Sharing screen" }).waitFor({ timeout: 15000 });
+    asked = await a.evaluate(() => window.__displayMedia.at(-1));
+    assert.equal(asked.audio, false, "no sound requested when switched off");
+    assert.equal(asked.systemAudio, "exclude");
+    log("OK share audio: requested by default, not when switched off");
 } catch (e) {
     failed = true;
     log("FAILED:", e.message);

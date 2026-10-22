@@ -32,3 +32,11 @@ Please see LICENSE in the repository root for full details.
 .unchecked {
   visibility: hidden;
 }
+
+.hint {
+  margin: 0;
+  padding: 0 var(--cpd-space-4x) var(--cpd-space-3x);
+  max-inline-size: 330px;
+  font: var(--cpd-font-body-sm-regular);
+  color: var(--cpd-color-text-secondary);
+}

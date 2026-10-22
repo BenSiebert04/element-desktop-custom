@@ -39,6 +39,26 @@ export const screenShareMode = new Setting<ScreenShareMode>(
   "standard",
 );
 
+/**
+ * Whether to share the sound along with the screen. In the desktop app this is
+ * the whole system's audio (Windows only; Electron can't capture a single
+ * application's audio). Applies to the next screen share.
+ */
+export const screenShareAudio = new Setting<boolean>(
+  "element-custom-screen-share-audio",
+  true,
+);
+
+/** Asks for the sound along with the screen, or explicitly not. */
+export function withScreenShareAudio(
+  capture: ScreenShareCaptureOptions,
+  enabled: boolean,
+): ScreenShareCaptureOptions {
+  return enabled
+    ? { ...capture, systemAudio: "include" }
+    : { ...capture, audio: false, systemAudio: "exclude" };
+}
+
 /** The mode to use, falling back to `standard` for unknown stored values. */
 export function currentScreenShareMode(): ScreenShareMode {
   const mode = screenShareMode.getValue();

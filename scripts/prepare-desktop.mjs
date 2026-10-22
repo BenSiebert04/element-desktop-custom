@@ -13,7 +13,8 @@
 //
 // Usage: node scripts/prepare-desktop.mjs <path to apps/desktop> [--webapp build/webapp]
 
-import { cpSync, existsSync, readFileSync, rmSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { cpSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,6 +32,20 @@ const copy = (from, to) => {
     cpSync(path.join(root, from), path.join(desktopDir, to), { recursive: true });
     console.log(`${from} -> ${path.join(desktopDir, to)}`);
 };
+
+// Mosaix's changes to Element Desktop (see scripts/element-web.mjs)
+const checkoutRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: desktopDir, encoding: "utf8" }).trim();
+const desktopPatchDir = path.join(root, "element-web", "patches-desktop");
+for (const patch of existsSync(desktopPatchDir) ? readdirSync(desktopPatchDir).filter((f) => f.endsWith(".patch")).sort() : []) {
+    const file = path.join(desktopPatchDir, patch);
+    const applied = spawnSync("git", ["apply", "--reverse", "--check", file], { cwd: checkoutRoot }).status === 0;
+    if (applied) {
+        console.log(`patch ${patch} (already applied)`);
+        continue;
+    }
+    execFileSync("git", ["apply", "--whitespace=nowarn", file], { cwd: checkoutRoot, stdio: "inherit" });
+    console.log(`patch ${patch}`);
+}
 
 copy("branding/variant.json", "variant.json");
 copy("desktop/electron-builder.custom.ts", "electron-builder.custom.ts");
