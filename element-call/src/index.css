@@ -1,0 +1,53 @@
+/*
+Copyright 2021-2024 New Vector Ltd.
+
+SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Element-Commercial
+Please see LICENSE in the repository root for full details.
+*/
+
+/* Styles for Element Call as a page of its own. The parts that apply wherever
+Element Call is shown live in base.css; these are about owning the document,
+and are not loaded when a host embeds Element Call as a component. */
+
+@import url("./base.css");
+
+body {
+  background-color: var(--cpd-color-bg-canvas-default);
+  color: var(--cpd-color-text-primary);
+  color-scheme: dark;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* This prohibits the view to scroll for pages smaller than 122px in width
+we use this for mobile pip webviews. Element Call adds this class to whatever
+it treats as its root, but it is only ever the page that should be pinned like
+this — done to a container inside a host application it would take that
+container out of the host's layout — so the selector says so. */
+body.no-scroll-body {
+  position: fixed;
+  width: 100%;
+}
+
+html,
+body,
+#root {
+  /* We use !important here to override vaul drawers, which have a side effect
+  of setting height: auto; on the body element and messing up our layouts */
+  height: 100% !important;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  /* The root should be a separate stacking context so that portalled elements
+  like modals and menus always appear over top of it */
+  isolation: isolate;
+}
+
+#root > [data-overlay-container] {
+  position: relative;
+  height: 100%;
+}
