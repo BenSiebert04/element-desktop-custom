@@ -20,6 +20,9 @@ import upstream from "./electron-builder.ts";
 
 const config = {
     ...upstream,
+    // No update feed at all: Element Custom must never be replaced by an
+    // official Element release (this also avoids an app-update.yml)
+    publish: null,
     win: {
         ...upstream.win,
         target: ["nsis", "zip"],
