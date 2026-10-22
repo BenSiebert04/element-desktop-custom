@@ -15,6 +15,7 @@ cd element-call && pnpm install --frozen-lockfile && cd ..
 e2e/setup.sh      # einmalig: Downloads, Synapse-Konfiguration, Element-Call-Build
 e2e/start.sh      # Backend starten
 node e2e/call-layout.e2e.mjs   # Test 1: Element Call standalone (Screenshots in e2e/results/)
+node e2e/call-features.e2e.mjs # Test 1b: Transparenz, Ebenen, Lautstärke 200 %, Hinweis
 node scripts/prepare-webapp.mjs --from <Element-Web-Build>  # Webapp wie in der Desktop-App (docs/UPDATING.md)
 node e2e/element-web.e2e.mjs   # Test 2: echte Element-Web-App mit unserem Widget
 node e2e/private-voice.e2e.mjs # Test 3: Private Voice in der echten Element-Web-App

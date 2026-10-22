@@ -86,7 +86,9 @@ Anrufe starten und betreten funktioniert wie im normalen Element
   Stream-Liste, gespeicherten Layouts und Zurücksetzen.
 - Über jeder Kachel erscheint beim Darüberfahren eine Leiste: Ziehen-Griff,
   Anheften, Maximieren, Vollbild, Ausblenden.
-- Rechtsklick auf eine Kachel öffnet das Kontextmenü (inkl. Lautstärke).
+- Rechtsklick auf eine Kachel öffnet das Kontextmenü: Lautstärke (bis 200 %,
+  pro Person gespeichert), Transparenz, im freien Layout Ebene und
+  Vorder-/Hintergrund.
 - Doppelklick maximiert/verkleinert eine Kachel.
 - Unten links zeigt „N ausgeblendet“, wie viele Streams versteckt sind;
   ein Klick öffnet die Liste zum Wiedereinblenden.

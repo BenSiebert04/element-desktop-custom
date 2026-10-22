@@ -19,6 +19,7 @@ import { type ObservableScope } from "../ObservableScope";
 import { createVolumeControls, type VolumeControls } from "../VolumeControls";
 import { observeTrackReference$ } from "../observeTrackReference";
 import { getVolumeStorage } from "../../custom-layout/volumeStorage";
+import { setPlaybackVolume } from "../../custom-layout/playbackVolume";
 
 export interface RemoteScreenShareViewModel
   extends BaseScreenShareViewModel, VolumeControls {
@@ -49,8 +50,9 @@ export function createRemoteScreenShare(
       sink$: scope.behavior(
         inputs.participant$.pipe(
           map(
+            // [element-custom] Volumes above 100 %
             (p) => (volume) =>
-              p?.setVolume(volume, Track.Source.ScreenShareAudio),
+              p && setPlaybackVolume(p, volume, Track.Source.ScreenShareAudio),
           ),
         ),
       ),

@@ -25,6 +25,7 @@ import {
 import { useUrlParams } from "../UrlParams";
 import { useReactiveState } from "../useReactiveState";
 import * as controls from "../controls";
+import { requestedPlaybackVolume } from "../custom-layout/playbackVolume";
 
 export interface MatrixAudioRendererProps {
   /**
@@ -245,10 +246,18 @@ function AudioTrackWithAudioNodes({
     if (!trackRef || trackReady) return;
     const track = trackRef.publication.track as RemoteAudioTrack;
     const useContext = audioContext && audioNodes.gain && audioNodes.pan;
+    // [element-custom] An <audio> element can't play louder than 100 %
+    if (!useContext && track.getVolume() > 1) track.setVolume(1);
     track.setAudioContext(useContext ? audioContext : undefined);
     track.setWebAudioPlugins(
       useContext ? [audioNodes.gain!, audioNodes.pan!] : [],
     );
+    // [element-custom] Now the volume may go above 100 %
+    const requested = requestedPlaybackVolume(
+      trackRef.participant.identity,
+      trackRef.source,
+    );
+    if (useContext && requested !== undefined) track.setVolume(requested);
     setTrackReady(true);
     controls.setPlaybackStarted();
   }, [audioContext, audioNodes, setTrackReady, trackReady, trackRef]);

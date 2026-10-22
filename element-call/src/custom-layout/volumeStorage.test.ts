@@ -6,12 +6,14 @@ Please see LICENSE in the repository root for full details.
 */
 
 import { describe, expect, test, vi } from "vitest";
+import { type RemoteParticipant, Track } from "livekit-client";
 
 import { testScope } from "../utils/test";
 import { constant } from "../state/Behavior";
 import { createVolumeControls } from "../state/VolumeControls";
 import { type KeyValueStore } from "./layoutStorage";
 import { createVolumeStorage, MAX_PLAYBACK_VOLUME } from "./volumeStorage";
+import { requestedPlaybackVolume, setPlaybackVolume } from "./playbackVolume";
 
 class MemoryStore implements KeyValueStore {
   public readonly data = new Map<string, string>();
@@ -72,7 +74,7 @@ describe("volume storage", () => {
 });
 
 describe("volume controls with a remembered volume", () => {
-  test("start at the remembered volume and report committed changes", () => {
+  test("start at the remembered volume and report committed changes", async () => {
     const sink = vi.fn();
     const committed = vi.fn();
     const controls = createVolumeControls(testScope(), {
@@ -90,13 +92,30 @@ describe("volume controls with a remembered volume", () => {
     expect(sink).toHaveBeenLastCalledWith(2);
     expect(committed).not.toHaveBeenCalled();
     controls.commitPlaybackVolume();
+    await Promise.resolve();
     expect(committed).toHaveBeenLastCalledWith(2);
 
     // Muting and unmuting are remembered too
     controls.togglePlaybackMuted();
+    await Promise.resolve();
     expect(committed).toHaveBeenLastCalledWith(0);
     controls.togglePlaybackMuted();
+    await Promise.resolve();
     expect(committed).toHaveBeenLastCalledWith(2);
+  });
+
+  test("remembers the new volume when the slider commits before the change", async () => {
+    // As the slider does with the keyboard (e.g. the End key)
+    const committed = vi.fn();
+    const controls = createVolumeControls(testScope(), {
+      pretendToBeDisconnected$: constant(false),
+      sink$: constant(() => {}),
+      onVolumeCommitted: committed,
+    });
+    controls.commitPlaybackVolume();
+    controls.adjustPlaybackVolume(2);
+    await Promise.resolve();
+    expect(committed).toHaveBeenCalledExactlyOnceWith(2);
   });
 
   test("a person remembered as muted can be unmuted to 100 %", () => {
@@ -108,5 +127,36 @@ describe("volume controls with a remembered volume", () => {
     expect(controls.playbackMuted$.value).toBe(true);
     controls.togglePlaybackMuted();
     expect(controls.playbackVolume$.value).toBe(1);
+  });
+});
+
+describe("volumes above 100 %", () => {
+  test("are limited to 100 % until the track plays through Web Audio", () => {
+    const applied: number[] = [];
+    let webAudio = false;
+    const participant = {
+      identity: "@carol:example.org:DEVICE",
+      setVolume: (volume: number): void => {
+        // Like an <audio> element
+        if (volume > 1 && !webAudio) throw new RangeError("volume > 1");
+        applied.push(volume);
+      },
+    } as unknown as RemoteParticipant;
+
+    setPlaybackVolume(participant, 1.8);
+    expect(applied).toEqual([1]);
+    // The renderer applies the requested volume once Web Audio is used
+    expect(
+      requestedPlaybackVolume(participant.identity, Track.Source.Microphone),
+    ).toBe(1.8);
+    webAudio = true;
+    setPlaybackVolume(participant, 2);
+    expect(applied).toEqual([1, 2]);
+    expect(
+      requestedPlaybackVolume(
+        participant.identity,
+        Track.Source.ScreenShareAudio,
+      ),
+    ).toBeUndefined();
   });
 });

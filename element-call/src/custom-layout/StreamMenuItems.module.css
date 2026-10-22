@@ -21,6 +21,7 @@ Please see LICENSE in the repository root for full details.
 
 .label {
   flex: 1;
+  color: var(--cpd-color-text-primary);
   font: var(--cpd-font-body-md-medium);
   white-space: nowrap;
 }

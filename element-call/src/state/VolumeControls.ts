@@ -109,11 +109,15 @@ export function createVolumeControls(
     .pipe(scope.bind())
     .subscribe(([sink, volume]) => sink(volume));
 
-  // [element-custom] Report committed changes (after the state has updated)
+  // [element-custom] Report committed changes. Read the volume once the
+  // current events are through: with the keyboard the slider commits before
+  // it reports the new value.
   if (onVolumeCommitted)
     merge(toggleMuted$, commitVolume$)
       .pipe(scope.bind())
-      .subscribe(() => onVolumeCommitted(playbackVolume$.value));
+      .subscribe(() =>
+        queueMicrotask(() => onVolumeCommitted(playbackVolume$.value)),
+      );
 
   return {
     playbackVolume$,
