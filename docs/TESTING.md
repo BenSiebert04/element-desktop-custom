@@ -12,6 +12,8 @@
 | Upstream Element Desktop | Unit-Tests von `apps/desktop` (v1.12.32) | ja | Regressionstest Desktop-Hauptprozess mit unserem Branding |
 | End-to-End | `e2e/call-layout.e2e.mjs` | nein (lokal, Linux) | echter Anruf über LiveKit mit 3 Browsern und 2 Screenshares |
 | Lautstärke/Ebenen | `volumeStorage.test.ts`, `CustomLayoutView.test.tsx`, `CustomLayoutViewModel.test.ts`, `computePlacements.test.ts` | ja | Speicherung pro Person (0–200 %, defekte Daten), Übernahme nach Tastatur-Eingabe, Begrenzung auf 100 % solange kein Web Audio, Ebenen vor „nach vorn holen“, Transparenz, Menüeinträge, Hinweis „n ausgeblendet“ nur 5 s nach Mausbewegung |
+| Bildschirmfreigabe-Modi | `screenShareMode.test.tsx` | ja | Optionen je Modus, Wechsel während der Freigabe (Hinweis, Auflösung, Degradation, nur oberste Simulcast-Ebene), unbekannte gespeicherte Werte, Auswahlmenü |
+| End-to-End | `e2e/screenshare-modes.e2e.mjs` | nein (lokal, Linux) | echte Freigabe: Highspeed sendet 60 fps mit `maintain-framerate`, Wechsel auf Lesbarkeit ohne neue Bildschirmauswahl ergibt volle Auflösung, `maintain-resolution`, 8 Mbit/s nur auf der großen Ebene |
 | End-to-End | `e2e/call-features.e2e.mjs` | nein (lokal, Linux) | echter Anruf: Rechtsklick in der Standardansicht, Transparenz 40 % und Ebene, Lautstärke 200 % mit gemessener Verstärkung 2,0, nach erneutem Beitritt wieder 200 %, Hinweis verschwindet nach 5 s |
 | End-to-End | `e2e/element-web.e2e.mjs` | nein (lokal, Linux) | ausgelieferte Webapp (Element Web + unser Widget), verschlüsselter Raum, Nachricht, Anruf aus der Raum-Kopfzeile |
 | Private Voice | `element-web/overlay/apps/web/src/mosaix/private-voice/*.test.ts(x)` | ja | Parser (fehlend, ungültig, neuere Version, falsche user_id, unbekannte Felder, Unicode, Kategorie `null`, Duplikate, Room-IDs ohne Doppelpunkt), Store (initial + live, gleiche Revision, Kontowechsel/Abmeldung, Offline-Cache als „stale“, Entfernen nach erfolgreichem Sync, Homeserver-Beschränkung), Raumliste (Kategorien, Reihenfolge, keine Duplikate, Favoriten/eigene Abschnitte bleiben), Kopfzeile (keine Anruf-Buttons im Textraum, DM unverändert, Brücken-Kennzeichnung) |
@@ -57,6 +59,10 @@ Bildschirm erscheint, Profil in einem eigenen Ordner).
 - **Lautstärke über 100 %** braucht die Wiedergabe über Web Audio, die dem
   gewählten Ausgabegerät folgen kann (Chromium, also die Desktop-App). Wo das
   nicht geht, ist bei 100 % Schluss; der eingestellte Wert bleibt gespeichert.
+- **Bildschirmfreigabe-Modi** legen fest, was bei knapper Bandbreite oder
+  Rechenleistung zuerst nachgibt. Mehr senden als die Verbindung hergibt
+  können sie nicht. Sind in den Entwicklereinstellungen von Element Call
+  eigene Freigabe-Werte aktiv, gelten diese statt des Modus.
 - **Ein Screenshare pro Gerät:** Element Call/LiveKit erlaubt je Teilnehmer-
   Gerät nur eine Bildschirmfreigabe. Mehrere Screenshares gleichzeitig kommen
   also von verschiedenen Personen bzw. Geräten – dafür ohne Begrenzung.

@@ -97,6 +97,15 @@
     "save_name_label": "Name für dieses Layout",
     "saved_heading": "Gespeicherte Layouts",
     "screen": "Bildschirm",
+    "screen_share_mode": {
+      "readability": "Lesbarkeit",
+      "readability_description": "Volle Bildschirmauflösung zuerst, die Bildrate sinkt bei Bedarf. Ideal für Text und Code.",
+      "speed": "Highspeed",
+      "speed_description": "Bis zu 60 fps zuerst, Auflösung und Qualität sinken bei Bedarf. Ideal für Spiele und Videos.",
+      "standard": "Standard",
+      "standard_description": "Element-Standard: 1080p, bis 15 fps.",
+      "title": "Modus der Bildschirmfreigabe"
+    },
     "screen_shares": "Bildschirmfreigaben",
     "send_to_back": "In den Hintergrund",
     "set_global": "Als Standard für alle Räume verwenden",

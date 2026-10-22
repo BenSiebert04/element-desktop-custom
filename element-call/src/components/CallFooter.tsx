@@ -14,7 +14,6 @@ import {
   EndCallButton,
   MicButton,
   VideoButton,
-  ShareScreenButton,
   SettingsButton,
   ReactionToggleButton,
   LoudspeakerButton,
@@ -31,6 +30,7 @@ import { type ViewModel } from "../state/ViewModel";
 import { useBehavior } from "../useBehavior";
 import { type LayoutSwitchViewModel } from "../state/LayoutSwitchViewModel";
 import { LayoutSwitch } from "../room/LayoutSwitch";
+import { ScreenShareModeButton } from "../custom-layout/ScreenShareModeButton";
 
 export interface AudioOutputSwitcher {
   targetOutput: string;
@@ -226,13 +226,13 @@ export const CallFooter: FC<FooterProps> = ({
 
   if (toggleScreenSharing !== undefined) {
     buttons.push(
-      <ShareScreenButton
+      // [element-custom] With a menu for the screen sharing mode
+      <ScreenShareModeButton
         size={buttonSize}
         key="share_screen"
         className={styles.shareScreen}
         enabled={sharingScreen ?? false}
         onClick={toggleScreenSharing}
-        data-testid="incall_screenshare"
       />,
     );
   }
