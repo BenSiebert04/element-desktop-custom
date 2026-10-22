@@ -11,6 +11,21 @@ Layout-Voreinstellungen und gespeicherte Layouts.
 > unveränderten Element Web/Desktop v1.12.32 und einem angepassten
 > Element Call v0.26.1. Dein Homeserver muss nicht verändert werden.
 
+## Projektstatus: privates Projekt, kein Support
+
+Mosaix ist ein persönliches Projekt für meinen eigenen Gebrauch. Ich habe
+**nicht vor, es regelmäßig zu aktualisieren** oder an neue Element-Versionen
+anzupassen, und ich biete keinen Support an.
+
+- **Issues und Pull Requests werden nicht bearbeitet.**
+- Wer Mosaix weiterverwenden oder verbessern möchte: bitte **selbst forken** und
+  den Fork eigenständig pflegen. Die Lizenz (AGPL-3.0) erlaubt das ausdrücklich.
+- Wie man Element-Updates einspielt, steht in [docs/UPDATING.md](docs/UPDATING.md).
+
+Nutzung auf eigene Verantwortung, ohne Gewährleistung (siehe [LICENSE](LICENSE)).
+
+## Dokumentation
+
 - Architektur und Designentscheidungen: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Installation, Anmeldung, Bedienung: [docs/INSTALL.md](docs/INSTALL.md)
 - Upstream-Updates einspielen: [docs/UPDATING.md](docs/UPDATING.md)
