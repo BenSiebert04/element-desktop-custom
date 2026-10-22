@@ -1,0 +1,3 @@
+# Build output and downloaded upstream sources
+/build/
+node_modules/

@@ -1,0 +1,248 @@
+# Builds Element Custom for Windows 11 x64.
+#
+#  1. element-call: tests and builds our Element Call (embedded widget)
+#  2. webapp:       official Element Web release + our Element Call + config
+#  3. desktop-test: Element Desktop's own unit tests (unmodified upstream)
+#  4. windows:      packages the Electron app (NSIS installer + portable zip)
+#  5. release:      on tags v*, publishes a GitHub release with the installer
+#
+# Upstream versions are pinned in upstream.json. Third-party actions are pinned
+# to commit SHAs.
+name: Build Windows app
+
+on:
+    push:
+        branches: ["**"]
+        tags: ["v*"]
+    pull_request:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    element-call:
+        name: Element Call (test & build)
+        runs-on: ubuntu-24.04
+        defaults:
+            run:
+                working-directory: element-call
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  package_json_file: element-call/package.json
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+              with:
+                  node-version: 24
+                  cache: pnpm
+                  cache-dependency-path: element-call/pnpm-lock.yaml
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Type check
+              run: pnpm lint:types
+
+            - name: Lint
+              run: pnpm lint:oxlint
+
+            - name: Unit tests (Element Call incl. custom layout)
+              run: pnpm exec vitest run --project=unit
+
+            - name: Build embedded Element Call
+              run: pnpm build:embedded
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: element-call-embedded
+                  path: element-call/dist
+                  if-no-files-found: error
+                  retention-days: 7
+
+    webapp:
+        name: Assemble web app
+        needs: element-call
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+              with:
+                  name: element-call-embedded
+                  path: element-call/dist
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+              with:
+                  node-version: 24
+
+            - name: Download Element Web, verify and add our Element Call
+              run: node scripts/prepare-webapp.mjs --out build/webapp
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: webapp
+                  path: build/webapp
+                  if-no-files-found: error
+                  retention-days: 7
+
+    desktop-test:
+        name: Element Desktop unit tests
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - name: Fetch Element Desktop sources
+              shell: bash
+              run: |
+                  TAG=$(node -p "require('./upstream.json').elementWeb.tag")
+                  git clone --depth 1 --branch "$TAG" https://github.com/element-hq/element-web build/element-web
+
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  package_json_file: build/element-web/package.json
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+              with:
+                  node-version-file: build/element-web/apps/desktop/.node-version
+                  cache: pnpm
+                  cache-dependency-path: build/element-web/pnpm-lock.yaml
+
+            - name: Apply Element Custom branding
+              run: node scripts/prepare-desktop.mjs build/element-web/apps/desktop
+
+            - name: Install dependencies
+              working-directory: build/element-web/apps/desktop
+              run: pnpm install --frozen-lockfile --filter element-desktop
+
+            - name: Unit tests
+              working-directory: build/element-web/apps/desktop
+              run: pnpm exec vitest run
+
+    windows:
+        name: Package Windows x64
+        needs: webapp
+        runs-on: windows-2025
+        defaults:
+            run:
+                shell: bash
+        steps:
+            # Keep line endings as they are, as upstream does for its Windows builds
+            - name: Configure git line endings
+              run: |
+                  git config --global core.autocrlf false
+                  git config --global core.eol lf
+
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - name: Determine versions
+              id: version
+              run: |
+                  TAG=$(node -p "require('./upstream.json').elementWeb.tag")
+                  BASE=${TAG#v}
+                  if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+                      VERSION=${GITHUB_REF#refs/tags/v}
+                  else
+                      VERSION="$BASE-custom.$GITHUB_RUN_NUMBER"
+                  fi
+                  echo "upstream_tag=$TAG" >> "$GITHUB_OUTPUT"
+                  echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+                  echo "Building Element Custom $VERSION on Element Desktop $TAG"
+
+            - name: Fetch Element Desktop sources
+              run: git clone --depth 1 --branch "$TAG" https://github.com/element-hq/element-web build/element-web
+              env:
+                  TAG: ${{ steps.version.outputs.upstream_tag }}
+
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  package_json_file: build/element-web/package.json
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+              with:
+                  node-version-file: build/element-web/apps/desktop/.node-version
+                  cache: pnpm
+                  cache-dependency-path: build/element-web/pnpm-lock.yaml
+
+            - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+              with:
+                  name: webapp
+                  path: build/webapp
+
+            - name: Apply Element Custom branding and web app
+              run: node scripts/prepare-desktop.mjs build/element-web/apps/desktop --webapp build/webapp
+
+            - name: Install dependencies
+              working-directory: build/element-web/apps/desktop
+              run: pnpm install --frozen-lockfile --filter element-desktop
+
+            - name: Build main process
+              working-directory: build/element-web/apps/desktop
+              run: |
+                  pnpm exec tsc
+                  node scripts/copy-res.ts
+
+            - name: Pack web app
+              working-directory: build/element-web/apps/desktop
+              run: pnpm run asar-webapp
+
+            - name: Package (unsigned)
+              working-directory: build/element-web/apps/desktop
+              run: pnpm exec electron-builder --config electron-builder.custom.ts --publish never --win --x64
+              env:
+                  VARIANT_PATH: variant.json
+                  VERSION: ${{ steps.version.outputs.version }}
+                  # No code signing certificate: build an unsigned app
+                  CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+            - name: Checksums
+              working-directory: build/element-web/apps/desktop/dist
+              run: sha256sum *.exe *.zip | tee SHA256SUMS.txt
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: Element-Custom-Windows-x64-${{ steps.version.outputs.version }}
+                  path: |
+                      build/element-web/apps/desktop/dist/*.exe
+                      build/element-web/apps/desktop/dist/*.zip
+                      build/element-web/apps/desktop/dist/SHA256SUMS.txt
+                  if-no-files-found: error
+                  retention-days: 30
+
+    release:
+        name: GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        needs: [windows, desktop-test]
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+              with:
+                  pattern: Element-Custom-Windows-x64-*
+                  path: dist
+                  merge-multiple: true
+
+            - name: Create release
+              run: |
+                  gh release create "$TAG" dist/* \
+                      --repo "$GITHUB_REPOSITORY" \
+                      --title "Element Custom $TAG" \
+                      --notes "Unsigned Windows x64 build of Element Custom. See README for installation notes (SmartScreen)."
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.ref_name }}
