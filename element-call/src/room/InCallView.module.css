@@ -119,3 +119,7 @@ spotlight tile is maximised and displaying video, apply a gradient background. *
 .customLayout {
   z-index: 0;
 }
+
+.customLayoutFiller {
+  flex-grow: 1;
+}

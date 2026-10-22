@@ -265,8 +265,9 @@ Please see LICENSE in the repository root for full details.
 
 .hiddenChip {
   position: absolute;
-  inset-block-end: var(--cpd-space-4x);
-  inset-inline-start: var(--cpd-space-4x);
+  inset-block-start: var(--cpd-space-2x);
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
   z-index: 1001;
   display: flex;
   align-items: center;

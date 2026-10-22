@@ -612,25 +612,30 @@ export const InCallView: FC<InCallViewProps> = ({
     }
 
     if (customLayoutActive) {
-      // [element-custom] Our own layout replaces Element Call's grid
+      // [element-custom] Our own layout replaces Element Call's grid. Like the
+      // fixed grid it is positioned absolutely, so a filler takes the grid's
+      // place in the flow and keeps the footer at the bottom.
       return (
-        <CustomLayoutView
-          vm={customLayoutVm}
-          className={styles.customLayout}
-          style={{
-            insetBlockStart: edgeToEdge
-              ? 0
-              : topWithinRoot + headerBounds.height,
-            height: edgeToEdge ? bounds.height : gridBounds.height,
-          }}
-          width={gridBounds.width}
-          height={edgeToEdge ? bounds.height : gridBounds.height}
-          showSpeakingIndicators
-          showNameTags={showNameTags}
-          focusable={!contentObscured}
-          onOpenProfile={openProfile}
-          aria-hidden={contentObscured}
-        />
+        <>
+          <div className={styles.customLayoutFiller} />
+          <CustomLayoutView
+            vm={customLayoutVm}
+            className={styles.customLayout}
+            style={{
+              insetBlockStart: edgeToEdge
+                ? 0
+                : topWithinRoot + headerBounds.height,
+              height: edgeToEdge ? bounds.height : gridBounds.height,
+            }}
+            width={gridBounds.width}
+            height={edgeToEdge ? bounds.height : gridBounds.height}
+            showSpeakingIndicators
+            showNameTags={showNameTags}
+            focusable={!contentObscured}
+            onOpenProfile={openProfile}
+            aria-hidden={contentObscured}
+          />
+        </>
       );
     }
 
