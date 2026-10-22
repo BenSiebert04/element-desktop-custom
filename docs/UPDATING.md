@@ -1,6 +1,6 @@
 # Upstream-Updates einspielen
 
-Element Custom besteht aus drei Upstream-Teilen, die getrennt aktualisiert
+Mosaix besteht aus drei Upstream-Teilen, die getrennt aktualisiert
 werden. Alle Versionen stehen in [`upstream.json`](../upstream.json).
 
 ## Element Web / Element Desktop
@@ -83,7 +83,7 @@ pnpm exec tsc
 node scripts/copy-res.ts
 pnpm run asar-webapp
 VARIANT_PATH=variant.json pnpm exec electron-builder --config electron-builder.custom.ts --publish never --win --x64
-# Ergebnis: dist/Element-Custom-Setup-<version>-x64.exe
+# Ergebnis: dist/Mosaix-Setup-<version>-x64.exe
 ```
 
 Nur das Call-Layout entwickeln (ohne Desktop-App): `cd element-call && pnpm dev`

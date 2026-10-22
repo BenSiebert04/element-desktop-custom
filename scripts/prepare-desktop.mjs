@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Copyright 2026 Element Custom contributors.
+// Copyright 2026 Mosaix contributors.
 // SPDX-License-Identifier: AGPL-3.0-only
 //
-// Applies the Element Custom branding to a checkout of Element Desktop
+// Applies the Mosaix branding to a checkout of Element Desktop
 // (apps/desktop in the element-web monorepo). Only files are added or
 // replaced; no upstream source file is modified:
 //

@@ -29,7 +29,7 @@ writeFileSync(
     path.join(webapp, "config.json"),
     JSON.stringify({
         default_server_config: { "m.homeserver": { base_url: "http://localhost:8008", server_name: "localhost:8448" } },
-        brand: "Element Custom",
+        brand: "Mosaix",
     }),
 );
 const server = spawn("node", [path.join(here, "serve.mjs"), webapp, "8081"], { stdio: "ignore" });
@@ -65,9 +65,9 @@ try {
     const [anna, ben, clara] = people;
 
     // Messaging still works (encrypted room)
-    await anna.page.getByRole("textbox", { name: /message/i }).fill("Hallo aus Element Custom");
+    await anna.page.getByRole("textbox", { name: /message/i }).fill("Hallo aus Mosaix");
     await anna.page.keyboard.press("Enter");
-    await ben.page.getByText("Hallo aus Element Custom").waitFor({ timeout: 30000 });
+    await ben.page.getByText("Hallo aus Mosaix").waitFor({ timeout: 30000 });
     log("OK encrypted message delivered");
 
     // Anna starts the call, the others join from the timeline

@@ -1,6 +1,8 @@
-# Element Custom
+# Mosaix
 
-Eine inoffizielle Windows-Version von **Element Desktop** mit einem frei
+*Mosaik + Matrix:* Dein Anruf als Kachel-Mosaik, das du selbst legst.
+
+Ein Matrix-Client für Windows auf Basis von **Element Desktop** mit einem frei
 konfigurierbaren Anruf-Layout: mehrere Bildschirmübertragungen gleichzeitig,
 einzeln ausblendbare Teilnehmer, verschiebbare und skalierbare Kacheln,
 Layout-Voreinstellungen und gespeicherte Layouts.
@@ -53,7 +55,7 @@ Standard.
 
 Fertige Installer entstehen automatisch per GitHub Actions
 ([Workflow „Build Windows app“](../../actions/workflows/build-windows.yml)) als
-Artefakt `Element-Custom-Windows-x64-<Version>`; bei Tags `v*` zusätzlich als
+Artefakt `Mosaix-Windows-x64-<Version>`; bei Tags `v*` zusätzlich als
 GitHub-Release. Der Build ist **nicht signiert** (siehe
 [docs/INSTALL.md](docs/INSTALL.md#windows-smartscreen)).
 
@@ -87,5 +89,6 @@ Quellcode (dieses Repository inkl. der gepinnten Upstream-Versionen)
 zugänglich machen. Da es sich um eine Client-App handelt, die nicht als
 Netzwerkdienst für Dritte betrieben wird, genügt für die private Nutzung das
 öffentliche (oder auf Anfrage zugängliche) Repository. Die Namen „Element“ und
-die Element-Logos sind Marken von Element; diese App verwendet daher einen
-eigenen Namen und ein eigenes Icon.
+die Element-Logos sind Marken von Element; diese App heißt daher „Mosaix“
+und hat ein eigenes Icon. „Element“ wird nur verwendet, um die Herkunft des
+Codes zu beschreiben.

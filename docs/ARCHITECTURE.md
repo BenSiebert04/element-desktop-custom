@@ -1,4 +1,4 @@
-# Architektur von Element Custom
+# Architektur von Mosaix
 
 ## Ausgangslage: Wo werden Anrufe gerendert?
 
@@ -139,13 +139,13 @@ alle Anpassungen des Raums.
 
 ## Windows-App
 
-| Eigenschaft            | Element Custom                                  | Offizielles Element |
+| Eigenschaft            | Mosaix                                  | Offizielles Element |
 | ---------------------- | ----------------------------------------------- | ------------------- |
-| Produktname            | Element Custom                                  | Element             |
-| App-ID                 | `io.github.bensiebert04.elementcustom`          | `im.riot.app`       |
-| Profil                 | `%APPDATA%\Element Custom`                      | `%APPDATA%\Element` |
-| Installationsort       | `%LOCALAPPDATA%\Programs\element-custom` (änderbar) | Squirrel `%LOCALAPPDATA%\element-desktop` |
-| Protokoll (SSO/OIDC)   | `io.github.bensiebert04.elementcustom://`       | `io.element.desktop://`, `element://` |
+| Produktname            | Mosaix                                  | Element             |
+| App-ID                 | `io.github.bensiebert04.mosaix`          | `im.riot.app`       |
+| Profil                 | `%APPDATA%\Mosaix`                      | `%APPDATA%\Element` |
+| Installationsort       | `%LOCALAPPDATA%\Programs\mosaix` (änderbar) | Squirrel `%LOCALAPPDATA%\element-desktop` |
+| Protokoll (SSO/OIDC)   | `io.github.bensiebert04.mosaix://`       | `io.element.desktop://`, `element://` |
 | Auto-Update            | **aus** (kein `update_base_url`)                | an                  |
 | Analytics / Rageshake  | aus                                             | PostHog / Rageshake |
 

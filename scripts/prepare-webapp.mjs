@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Copyright 2026 Element Custom contributors.
+// Copyright 2026 Mosaix contributors.
 // SPDX-License-Identifier: AGPL-3.0-only
 //
-// Assembles the web app that is packaged into Element Custom:
+// Assembles the web app that is packaged into Mosaix:
 //
 //  1. Downloads the official, prebuilt Element Web release named in
 //     upstream.json and verifies its SHA-256 checksum.

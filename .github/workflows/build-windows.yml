@@ -1,4 +1,4 @@
-# Builds Element Custom for Windows 11 x64.
+# Builds Mosaix for Windows 11 x64.
 #
 #  1. element-call: tests and builds our Element Call (embedded widget)
 #  2. webapp:       official Element Web release + our Element Call + config
@@ -120,7 +120,7 @@ jobs:
                   cache: pnpm
                   cache-dependency-path: build/element-web/pnpm-lock.yaml
 
-            - name: Apply Element Custom branding
+            - name: Apply Mosaix branding
               run: node scripts/prepare-desktop.mjs build/element-web/apps/desktop
 
             - name: Install dependencies
@@ -163,7 +163,7 @@ jobs:
                   fi
                   echo "upstream_tag=$TAG" >> "$GITHUB_OUTPUT"
                   echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-                  echo "Building Element Custom $VERSION on Element Desktop $TAG"
+                  echo "Building Mosaix $VERSION on Element Desktop $TAG"
 
             - name: Fetch Element Desktop sources
               run: git clone --depth 1 --branch "$TAG" https://github.com/element-hq/element-web build/element-web
@@ -185,7 +185,7 @@ jobs:
                   name: webapp
                   path: build/webapp
 
-            - name: Apply Element Custom branding and web app
+            - name: Apply Mosaix branding and web app
               run: node scripts/prepare-desktop.mjs build/element-web/apps/desktop --webapp build/webapp
 
             - name: Install dependencies
@@ -217,7 +217,7 @@ jobs:
 
             - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               with:
-                  name: Element-Custom-Windows-x64-${{ steps.version.outputs.version }}
+                  name: Mosaix-Windows-x64-${{ steps.version.outputs.version }}
                   path: |
                       build/element-web/apps/desktop/dist/*.exe
                       build/element-web/apps/desktop/dist/*.zip
@@ -235,7 +235,7 @@ jobs:
         steps:
             - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
               with:
-                  pattern: Element-Custom-Windows-x64-*
+                  pattern: Mosaix-Windows-x64-*
                   path: dist
                   merge-multiple: true
 
@@ -243,8 +243,8 @@ jobs:
               run: |
                   gh release create "$TAG" dist/* \
                       --repo "$GITHUB_REPOSITORY" \
-                      --title "Element Custom $TAG" \
-                      --notes "Unsigned Windows x64 build of Element Custom. See README for installation notes (SmartScreen)."
+                      --title "Mosaix $TAG" \
+                      --notes "Unsigned Windows x64 build of Mosaix. See README for installation notes (SmartScreen)."
               env:
                   GH_TOKEN: ${{ github.token }}
                   TAG: ${{ github.ref_name }}

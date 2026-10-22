@@ -15,7 +15,7 @@
 
 Zusätzlich wurde der fertige Windows-Build aus CI heruntergeladen und geprüft:
 `webapp.asar` enthält das angepasste Element Call, `config.json` hat kein
-`update_base_url`, `app.asar` trägt Name/App-ID/Protokoll von Element Custom.
+`update_base_url`, `app.asar` trägt Name/App-ID/Protokoll von Mosaix.
 Unter Linux wurde ein Testbuild derselben Konfiguration gestartet (Login-
 Bildschirm erscheint, Profil in einem eigenen Ordner).
 

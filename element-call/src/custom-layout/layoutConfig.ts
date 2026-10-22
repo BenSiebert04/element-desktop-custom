@@ -1,12 +1,12 @@
 /*
-Copyright 2026 Element Custom contributors.
+Copyright 2026 Mosaix contributors.
 
 SPDX-License-Identifier: AGPL-3.0-only
 Please see LICENSE in the repository root for full details.
 */
 
 /**
- * Data model of the "Element Custom" call layout.
+ * Data model of the "Mosaix" call layout.
  *
  * Everything in here is a purely local display preference. Nothing in this
  * module ever talks to the homeserver, LiveKit or other participants.

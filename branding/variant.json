@@ -1,7 +1,7 @@
 {
-    "appId": "io.github.bensiebert04.elementcustom",
-    "name": "element-custom",
-    "productName": "Element Custom",
-    "description": "Element Custom: Element Desktop with a freely configurable call layout",
-    "protocols": ["io.github.bensiebert04.elementcustom"]
+    "appId": "io.github.bensiebert04.mosaix",
+    "name": "mosaix",
+    "productName": "Mosaix",
+    "description": "Mosaix: Matrix client based on Element, with a freely configurable call layout",
+    "protocols": ["io.github.bensiebert04.mosaix"]
 }

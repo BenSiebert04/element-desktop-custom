@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the Element Custom app icons (branding/build/icon.png/.ico).
+"""Generates the Mosaix app icons (branding/build/icon.png/.ico).
 
 The icon is original artwork (a tiled call layout on a rounded square), so
 that the app is clearly distinguishable from the official Element client.

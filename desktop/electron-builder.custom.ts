@@ -1,12 +1,12 @@
 /*
-Copyright 2026 Element Custom contributors.
+Copyright 2026 Mosaix contributors.
 
 SPDX-License-Identifier: AGPL-3.0-only
 Please see LICENSE in the repository root for full details.
 */
 
 /**
- * electron-builder configuration of Element Custom.
+ * electron-builder configuration of Mosaix.
  *
  * This file is copied next to Element Desktop's own `electron-builder.ts`
  * (apps/desktop in element-web) by scripts/prepare-desktop.mjs. It takes the
@@ -20,14 +20,14 @@ import upstream from "./electron-builder.ts";
 
 const config = {
     ...upstream,
-    // No update feed at all: Element Custom must never be replaced by an
+    // No update feed at all: Mosaix must never be replaced by an
     // official Element release (this also avoids an app-update.yml)
     publish: null,
     win: {
         ...upstream.win,
         target: ["nsis", "zip"],
-        // Keep "Element Custom" distinct from the official app in Windows
-        artifactName: "Element-Custom-${version}-${arch}.${ext}",
+        // Keep "Mosaix" distinct from the official app in Windows
+        artifactName: "Mosaix-${version}-${arch}.${ext}",
     },
     nsis: {
         oneClick: false,
@@ -35,11 +35,11 @@ const config = {
         allowToChangeInstallationDirectory: true,
         createDesktopShortcut: true,
         createStartMenuShortcut: true,
-        shortcutName: "Element Custom",
-        uninstallDisplayName: "Element Custom",
+        shortcutName: "Mosaix",
+        uninstallDisplayName: "Mosaix",
         // Never touch the user's data (and certainly not the official app's)
         deleteAppDataOnUninstall: false,
-        artifactName: "Element-Custom-Setup-${version}-${arch}.${ext}",
+        artifactName: "Mosaix-Setup-${version}-${arch}.${ext}",
     },
 };
 
