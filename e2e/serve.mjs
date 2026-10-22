@@ -11,8 +11,9 @@ const types = {
 };
 http.createServer((req, res) => {
     let file = path.join(root, decodeURIComponent(new URL(req.url, "http://x").pathname));
-    if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory())
-        file = path.join(root, "index.html");
+    if (file.startsWith(root) && fs.existsSync(file) && fs.statSync(file).isDirectory())
+        file = path.join(file, "index.html");
+    if (!file.startsWith(root) || !fs.existsSync(file)) file = path.join(root, "index.html");
     res.writeHead(200, { "content-type": types[path.extname(file)] ?? "application/octet-stream" });
     fs.createReadStream(file).pipe(res);
 }).listen(port, "127.0.0.1");
