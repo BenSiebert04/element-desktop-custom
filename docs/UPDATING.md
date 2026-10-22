@@ -5,23 +5,23 @@ werden. Alle Versionen stehen in [`upstream.json`](../upstream.json).
 
 ## Element Web / Element Desktop
 
-Diese werden nicht verändert, ein Update ist daher nur eine Versionsänderung:
-
 1. Neues Release auf <https://github.com/element-hq/element-web/releases>
-   wählen, z. B. `v1.12.40`.
-2. Prüfsumme des Webapp-Archivs ermitteln:
-   ```sh
-   curl -LO https://github.com/element-hq/element-web/releases/download/v1.12.40/element-v1.12.40.tar.gz
-   sha256sum element-v1.12.40.tar.gz
-   ```
-   (Optional zusätzlich die GPG-Signatur `…tar.gz.asc` mit dem Element-
-   Release-Key prüfen.)
-3. In `upstream.json` `tag`, `webappTarball` und `webappTarballSha256`
+   wählen, z. B. `v1.12.40`, und in `upstream.json` `elementWeb.tag`
    eintragen.
-4. Prüfen, welche Element-Call-Version Element Web mitbringt:
+2. Unsere Element-Web-Änderungen auf den neuen Tag bringen:
+   ```sh
+   git clone --branch v1.12.40 https://github.com/element-hq/element-web build/ew
+   node scripts/element-web.mjs apply build/ew
+   ```
+   Lässt sich der Patch nicht anwenden, die betroffenen `[mosaix]`-Stellen
+   von Hand übertragen (Liste in
+   [ARCHITECTURE.md](ARCHITECTURE.md#element-web)), dann `pnpm install`,
+   Tests (siehe [Lokal bauen](#lokal-bauen)) und
+   `node scripts/element-web.mjs export build/ew`.
+3. Prüfen, welche Element-Call-Version Element Web mitbringt:
    `apps/web/package.json` → `@element-hq/element-call-embedded`. Unser
    Element Call sollte auf derselben Minor-Version basieren (siehe unten).
-5. Push → CI baut und testet alles.
+4. Push → CI baut und testet alles.
 
 Falls Element Desktop seine `electron-builder.ts` stark umbaut, muss ggf.
 `desktop/electron-builder.custom.ts` angepasst werden (sie importiert die
@@ -71,11 +71,22 @@ pnpm install --frozen-lockfile
 pnpm build:embedded
 cd ..
 
-# 2. Webapp: offizielles Element Web + unser Element Call + config.json
-node scripts/prepare-webapp.mjs
-
-# 3. Element Desktop
+# 2. Element Web aus dem Quellcode, mit unseren Änderungen
+git config --global core.longpaths true   # nur Windows
 git clone --depth 1 --branch v1.12.32 https://github.com/element-hq/element-web build/element-web
+node scripts/element-web.mjs apply build/element-web
+cd build/element-web
+pnpm install --frozen-lockfile
+cd apps/web
+pnpm exec nx run-many -t test:unit:prepare -p
+pnpm exec vitest run --project unit src/mosaix   # Tests von Private Voice
+pnpm run build                                   # Ergebnis: apps/web/webapp
+cd ../../../..
+
+# 3. Webapp: dieses Element Web + unser Element Call + config.json
+node scripts/prepare-webapp.mjs --from build/element-web/apps/web/webapp
+
+# 4. Element Desktop (derselbe Checkout)
 node scripts/prepare-desktop.mjs build/element-web/apps/desktop --webapp build/webapp
 cd build/element-web/apps/desktop
 pnpm install --frozen-lockfile --filter element-desktop
