@@ -1,0 +1,432 @@
+diff --git a/apps/web/src/components/views/rooms/RoomHeader/RoomHeader.tsx b/apps/web/src/components/views/rooms/RoomHeader/RoomHeader.tsx
+index de7fedb..0f5a508 100644
+--- a/apps/web/src/components/views/rooms/RoomHeader/RoomHeader.tsx
++++ b/apps/web/src/components/views/rooms/RoomHeader/RoomHeader.tsx
+@@ -7,6 +7,8 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
+ Please see LICENSE files in the repository root for full details.
+ */
+ 
++import { usePrivateVoiceRoom } from "../../../../mosaix/private-voice/usePrivateVoiceRoom";
++import { PrivateVoiceRoomBadges } from "../../../../mosaix/private-voice/PrivateVoiceRoomBadges";
+ import React, { type JSX, useCallback, useContext, useState } from "react";
+ import { Text, Button, IconButton, Menu, MenuItem, Tooltip } from "@vector-im/compound-web";
+ import VideoCallIcon from "@vector-im/compound-design-tokens/assets/web/icons/video-call-solid";
+@@ -75,6 +77,8 @@ function RoomHeaderButtons({ room, extraButtons }: { room: Room; extraButtons?:
+         showVoiceCallButton,
+         showVideoCallButton,
+     } = useRoomCall(room);
++    // [mosaix] Server-managed text rooms have no call controls at all
++    const { hideCallControls } = usePrivateVoiceRoom(room.roomId);
+     const threadNotifications = useRoomThreadNotifications(room);
+     const globalNotificationState = useGlobalNotificationState();
+ 
+@@ -295,7 +299,7 @@ function RoomHeaderButtons({ room, extraButtons }: { room: Room; extraButtons?:
+ 
+             {isViewingCall && <CallGuestLinkButton room={room} />}
+ 
+-            {activeCallSessionType && !isConnectedToCall && !isViewingCall ? (
++            {hideCallControls ? null : activeCallSessionType && !isConnectedToCall && !isViewingCall ? (
+                 joinCallButton
+             ) : (
+                 <>
+@@ -414,7 +418,10 @@ export default function RoomHeader({
+     oobData?: IOOBData;
+ }): JSX.Element {
+     const sdkContext = useContext(SDKContext);
+-    const roomName = useRoomName(room);
++    const privateVoice = usePrivateVoiceRoom(room.roomId);
++    // [mosaix] Name from the server-managed configuration, if any
++    const matrixRoomName = useRoomName(room);
++    const roomName = privateVoice.room?.name || matrixRoomName;
+     const joinRule = useRoomState(room, (state) => state.getJoinRule());
+     const historyVisibility = useRoomState(room, (state) => state.getHistoryVisibility());
+     const dmMember = useDmMember(room);
+@@ -469,6 +476,8 @@ export default function RoomHeader({
+                         >
+                             <span className="mx_RoomHeader_truncated mx_lineClamp">{roomName}</span>
+ 
++                            <PrivateVoiceRoomBadges state={privateVoice} isEncrypted={!!isRoomEncrypted} />
++
+                             {isDirectMessage && dmUserStatus && (
+                                 <StatusTextView status={dmUserStatus} className="mx_RoomHeader_userStatus" />
+                             )}
+diff --git a/apps/web/src/i18n/strings/de_DE.json b/apps/web/src/i18n/strings/de_DE.json
+index 18964a2..3cfb813 100644
+--- a/apps/web/src/i18n/strings/de_DE.json
++++ b/apps/web/src/i18n/strings/de_DE.json
+@@ -1689,6 +1689,21 @@
+         "toast_description": "%(brand)s ist in mobilen Browsern experimentell. Für eine bessere Erfahrung nutze unsere App.",
+         "toast_title": "Nutze die App für eine bessere Erfahrung"
+     },
++    "mosaix": {
++        "private_voice": {
++            "bridged_audio": "Discord: Audio",
++            "bridged_audio_tooltip": "Sprache wird mit Discord geteilt. Video und Bildschirmfreigabe bleiben in Matrix.",
++            "bridged_text": "Discord: Text",
++            "bridged_text_tooltip": "Nachrichten in diesem Raum werden mit Discord geteilt.",
++            "matrix_only": "Nur Matrix",
++            "matrix_only_tooltip": "Dieser Raum ist nicht mit Discord verbunden.",
++            "not_encrypted": "Nicht verschlüsselt",
++            "not_encrypted_tooltip": "Der Server erwartet hier Ende-zu-Ende-Verschlüsselung, aber der Raum ist nicht verschlüsselt.",
++            "stale": "Offline",
++            "stale_tooltip": "Die Serverkonfiguration konnte nicht aktualisiert werden und ist möglicherweise veraltet.",
++            "voice_room": "Sprachraum"
++        }
++    },
+     "name_and_id": "%(name)s (%(userId)s)",
+     "no_more_results": "Keine weiteren Ergebnisse",
+     "notif_panel": {
+diff --git a/apps/web/src/i18n/strings/en_EN.json b/apps/web/src/i18n/strings/en_EN.json
+index ed8155c..e2b42b9 100644
+--- a/apps/web/src/i18n/strings/en_EN.json
++++ b/apps/web/src/i18n/strings/en_EN.json
+@@ -1710,6 +1710,21 @@
+         "toast_description": "%(brand)s is experimental on a mobile web browser. For a better experience and the latest features, use our free native app.",
+         "toast_title": "Use app for a better experience"
+     },
++    "mosaix": {
++        "private_voice": {
++            "bridged_audio": "Discord: audio",
++            "bridged_audio_tooltip": "Voice is shared with Discord. Video and screen sharing stay within Matrix.",
++            "bridged_text": "Discord: text",
++            "bridged_text_tooltip": "Messages in this room are shared with Discord.",
++            "matrix_only": "Matrix only",
++            "matrix_only_tooltip": "This room is not connected to Discord.",
++            "not_encrypted": "Not encrypted",
++            "not_encrypted_tooltip": "The server expects end-to-end encryption here, but this room is not encrypted.",
++            "stale": "Offline",
++            "stale_tooltip": "The server configuration could not be updated and may be out of date.",
++            "voice_room": "Voice room"
++        }
++    },
+     "name_and_id": "%(name)s (%(userId)s)",
+     "no_more_results": "No more results",
+     "notif_panel": {
+diff --git a/apps/web/src/models/Call.test.ts b/apps/web/src/models/Call.test.ts
+index fea19e6..9255ed5 100644
+--- a/apps/web/src/models/Call.test.ts
++++ b/apps/web/src/models/Call.test.ts
+@@ -8,6 +8,7 @@ Please see LICENSE files in the repository root for full details.
+ 
+ // @vitest-environment happy-dom
+ 
++import { PrivateVoiceStore } from "../mosaix/private-voice/PrivateVoiceStore";
+ import EventEmitter from "node:events";
+ import { RoomType, type Room, RoomEvent, MatrixEvent, type IMyDevice, type RoomMember } from "matrix-js-sdk/src/matrix";
+ import { KnownMembership } from "matrix-js-sdk/src/types";
+@@ -1265,6 +1266,21 @@ describe("ElementCall with the React component embedding", () => {
+             expect(config.skipLobby).toBeUndefined();
+         });
+ 
++        it("[mosaix] treats server-managed voice rooms like voice channels: lobby, microphone only", () => {
++            const spy = vi
++                .spyOn(PrivateVoiceStore.instance, "isManagedVoiceRoom")
++                .mockImplementation((id) => id === room.roomId);
++            try {
++                // Even if asked to skip it, the lobby is shown: the user joins with a click
++                call.widgetGenerationParameters = { skipLobby: true };
++                const { intent, config } = call.getCallOptions();
++                expect(intent).toBe(ElementCallIntent.StartCallVoice);
++                expect(config).toMatchObject({ returnToLobby: true, skipLobby: false });
++            } finally {
++                spy.mockRestore();
++            }
++        });
++
+         it("always returns to the lobby and never skips it in video rooms", () => {
+             vi.spyOn(room, "isElementVideoRoom").mockReturnValue(true);
+             call.widgetGenerationParameters = { skipLobby: true };
+diff --git a/apps/web/src/models/Call.ts b/apps/web/src/models/Call.ts
+index bc728af..23b3db4 100644
+--- a/apps/web/src/models/Call.ts
++++ b/apps/web/src/models/Call.ts
+@@ -6,6 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
+ Please see LICENSE files in the repository root for full details.
+ */
+ 
++import { PrivateVoiceStore } from "../mosaix/private-voice/PrivateVoiceStore";
+ import {
+     TypedEventEmitter,
+     RoomEvent,
+@@ -717,6 +718,16 @@ export class ElementCall extends Call {
+ 
+         const isDM = !!DMRoomMap.shared().getUserIdForRoomId(room.roomId);
+         const hasCallStarted = client.matrixRTC.getRoomSession(room).memberships.length > 0;
++        if (PrivateVoiceStore.instance.isManagedVoiceRoom(room.roomId)) {
++            // [mosaix] Server-managed voice rooms behave like voice channels: always show the lobby,
++            // start with the microphone only (camera and screen sharing remain available) and
++            // return to the lobby after leaving. Nothing is joined or sent automatically.
++            return {
++                intent: hasCallStarted ? ElementCallIntent.JoinExistingVoice : ElementCallIntent.StartCallVoice,
++                returnToLobby: true,
++                skipLobby: false,
++            };
++        }
+         if (isDM) {
+             if (hasCallStarted) {
+                 return { intent: voiceOnly ? ElementCallIntent.JoinExistingDMVoice : ElementCallIntent.JoinExistingDM };
+diff --git a/apps/web/src/stores/RoomViewStore.test.ts b/apps/web/src/stores/RoomViewStore.test.ts
+index 9869f5d..a63e87b 100644
+--- a/apps/web/src/stores/RoomViewStore.test.ts
++++ b/apps/web/src/stores/RoomViewStore.test.ts
+@@ -8,6 +8,7 @@ Please see LICENSE files in the repository root for full details.
+ 
+ // @vitest-environment happy-dom
+ 
++import { PrivateVoiceStore } from "../mosaix/private-voice/PrivateVoiceStore";
+ import { KnownMembership, MatrixError, Room } from "matrix-js-sdk/src/matrix";
+ import { sleep } from "matrix-js-sdk/src/utils";
+ import EventEmitter from "node:events";
+@@ -486,6 +487,34 @@ describe("RoomViewStore", function () {
+         expect(roomViewStore.isViewingCall()).toEqual(false);
+     });
+ 
++    it("[mosaix] opens the call lobby of a server-managed voice room without joining", async () => {
++        const call = {
++            presented: false,
++            connectionState: ConnectionState.Disconnected,
++            widget: { id: "!widget:example.org" },
++            start: vi.fn(),
++        } as unknown as Call;
++        vi.spyOn(CallStore.instance, "getCall").mockReturnValue(call);
++        vi.spyOn(PrivateVoiceStore.instance, "isManagedVoiceRoom").mockImplementation((id) => id === roomId);
++        await setupAsyncStoreWithClient(CallStore.instance, MatrixClientPeg.safeGet());
++
++        dis.dispatch<ViewRoomPayload>({ action: Action.ViewRoom, room_id: roomId, metricsTrigger: undefined });
++        await untilDispatch(Action.ViewRoom, dis);
++
++        // The lobby is shown, ...
++        expect(roomViewStore.isViewingCall()).toEqual(true);
++        // ...but nothing asks to skip it: joining stays up to the user
++        expect(call.start).toHaveBeenCalledWith({ skipLobby: undefined, voiceOnly: undefined });
++    });
++
++    it("[mosaix] opens the timeline of other rooms as before", async () => {
++        vi.spyOn(PrivateVoiceStore.instance, "isManagedVoiceRoom").mockReturnValue(false);
++        vi.spyOn(CallStore.instance, "getActiveCall").mockReturnValue(null);
++        dis.dispatch<ViewRoomPayload>({ action: Action.ViewRoom, room_id: roomId, metricsTrigger: undefined });
++        await untilDispatch(Action.ViewRoom, dis);
++        expect(roomViewStore.isViewingCall()).toEqual(false);
++    });
++
+     it("opens a video-intent call maximised in the room", async () => {
+         const call = {
+             presented: false,
+diff --git a/apps/web/src/stores/RoomViewStore.tsx b/apps/web/src/stores/RoomViewStore.tsx
+index 5536012..00f73f0 100644
+--- a/apps/web/src/stores/RoomViewStore.tsx
++++ b/apps/web/src/stores/RoomViewStore.tsx
+@@ -8,6 +8,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
+ Please see LICENSE files in the repository root for full details.
+ */
+ 
++import { PrivateVoiceStore } from "../mosaix/private-voice/PrivateVoiceStore";
+ import React, { type ReactNode } from "react";
+ import * as utils from "matrix-js-sdk/src/utils";
+ import {
+@@ -370,6 +371,8 @@ export class RoomViewStore extends EventEmitter {
+                 if (payload.room_id === this.state.roomId) viewingCall = this.state.viewingCall;
+                 // Always view the call in video rooms
+                 else if (room && isVideoRoom(room)) viewingCall = true;
++                // [mosaix] Server-managed voice rooms open the call lobby; joining stays a click away
++                else if (room && PrivateVoiceStore.instance.isManagedVoiceRoom(room.roomId)) viewingCall = true;
+                 // Otherwise, only view if actively connected
+                 else viewingCall = CallStore.instance.getActiveCall(payload.room_id) !== null;
+             }
+diff --git a/apps/web/src/stores/room-list-v3/RoomListStoreV3.ts b/apps/web/src/stores/room-list-v3/RoomListStoreV3.ts
+index c2dcfad..c490b9b 100644
+--- a/apps/web/src/stores/room-list-v3/RoomListStoreV3.ts
++++ b/apps/web/src/stores/room-list-v3/RoomListStoreV3.ts
+@@ -41,6 +41,9 @@ import { filterBoolean } from "../../utils/arrays";
+ import { CHATS_TAG, createSection, deleteSection, editSection, getOrderedSectionTags, reorderSection } from "./section";
+ import { DefaultTagID, type TagID } from "./skip-list/tag";
+ import { SDKContextClass } from "../../contexts/SDKContextClass.ts";
++import { PrivateVoiceStore } from "../../mosaix/private-voice/PrivateVoiceStore.ts";
++import { getManagedSectionTagsByRoom } from "../../mosaix/private-voice/roomList.ts";
++import { UPDATE_EVENT } from "../AsyncStore";
+ 
+ export enum RoomListStoreV3Event {
+     // The event/channel which is called when the room lists have been changed.
+@@ -132,6 +135,9 @@ export class RoomListStoreV3Class extends AsyncStoreWithClient<EmptyObject> {
+         SettingsStore.watchSetting("RoomList.showSections", null, () => this.onSectionsChange());
+         SettingsStore.watchSetting("RoomList.showPeopleSection", null, () => this.onSectionsChange());
+ 
++        // [mosaix] The server-managed categories changed
++        PrivateVoiceStore.instance.on(UPDATE_EVENT, () => this.onSectionsChange());
++
+         SettingsStore.watchSetting("Spaces.showPeopleInSpace", null, (_settingName, roomId) => {
+             if (roomId === SDKContextClass.instance.spaceStore.activeSpace) this.onActiveSpaceChanged();
+         });
+@@ -492,6 +498,11 @@ export class RoomListStoreV3Class extends AsyncStoreWithClient<EmptyObject> {
+ 
+     private onActiveSpaceChanged(): void {
+         if (!this.roomSkipList) return;
++        // [mosaix] Managed categories depend on the active space
++        if (PrivateVoiceStore.instance.config) {
++            this.loadSections();
++            this.roomSkipList.useNewFilters(this.getSkipListFilters());
++        }
+         this.roomSkipList.calculateActiveSpaceForNodes();
+         this.scheduleEmit();
+     }
+@@ -500,7 +511,11 @@ export class RoomListStoreV3Class extends AsyncStoreWithClient<EmptyObject> {
+      * Get the list of filters to be used in the skip list, including the section filter.
+      */
+     private getSkipListFilters(): AnyFilter[] {
+-        if (!this.sectionFilter) this.sectionFilter = new SectionFilter(this.sortedTags);
++        if (!this.sectionFilter)
++            this.sectionFilter = new SectionFilter(
++                this.sortedTags,
++                getManagedSectionTagsByRoom(SDKContextClass.instance.spaceStore.activeSpace),
++            );
+         return [...this.filterByFilterKey.values(), this.sectionFilter];
+     }
+ 
+diff --git a/apps/web/src/stores/room-list-v3/section.ts b/apps/web/src/stores/room-list-v3/section.ts
+index daa7bdc..a23214d 100644
+--- a/apps/web/src/stores/room-list-v3/section.ts
++++ b/apps/web/src/stores/room-list-v3/section.ts
+@@ -16,6 +16,7 @@ import { DefaultTagID, type TagID } from "./skip-list/tag";
+ import { isMetaSpace, MetaSpace, type SpaceKey } from "../spaces";
+ import { SDKContextClass } from "../../contexts/SDKContextClass.ts";
+ import { tagRoom } from "../../utils/room/tagRoom.ts";
++import { withManagedSectionTags } from "../../mosaix/private-voice/roomList.ts";
+ 
+ /**
+  * A synthetic tag used to represent the "Rooms" or "Chats" section, which contains
+@@ -228,7 +229,9 @@ export function getOrderedReorderableSections(): ReorderableSection[] {
+ export function getOrderedSectionTags(): string[] {
+     const showPeopleSection = SettingsStore.getValue("RoomList.showPeopleSection");
+     const reorderable = getOrderedReorderableSections().filter((tag) => showPeopleSection || tag !== DefaultTagID.DM);
+-    return [DefaultTagID.Invite, DefaultTagID.Favourite, ...reorderable, DefaultTagID.LowPriority];
++    // [mosaix] Server-managed categories of the active space (virtual sections)
++    const withManaged = withManagedSectionTags(reorderable, SDKContextClass.instance.spaceStore.activeSpace);
++    return [DefaultTagID.Invite, DefaultTagID.Favourite, ...withManaged, DefaultTagID.LowPriority];
+ }
+ 
+ /**
+diff --git a/apps/web/src/stores/room-list-v3/skip-list/filters/SectionFilter.ts b/apps/web/src/stores/room-list-v3/skip-list/filters/SectionFilter.ts
+index 05bdc69..74258f1 100644
+--- a/apps/web/src/stores/room-list-v3/skip-list/filters/SectionFilter.ts
++++ b/apps/web/src/stores/room-list-v3/skip-list/filters/SectionFilter.ts
+@@ -11,6 +11,7 @@ import { type FilterKey, type MultiKeyFilter } from ".";
+ import DMRoomMap from "../../../../utils/DMRoomMap";
+ import { CHATS_TAG } from "../../section";
+ import { DefaultTagID } from "../tag";
++import { pickSectionTag } from "../../../../mosaix/private-voice/roomList";
+ 
+ /**
+  * Works out which section a room belongs to. A room belongs to exactly one section: the Invites
+@@ -30,8 +31,12 @@ export class SectionFilter implements MultiKeyFilter {
+ 
+     /**
+      * @param sectionTags All the section tags, in display order.
++     * @param managedTags [mosaix] The section tag of each server-managed room of the active space.
+      */
+-    public constructor(private readonly sectionTags: string[]) {
++    public constructor(
++        private readonly sectionTags: string[],
++        private readonly managedTags: Map<string, string> = new Map(),
++    ) {
+         this.hasPeopleSection = sectionTags.includes(DefaultTagID.DM);
+     }
+ 
+@@ -42,7 +47,8 @@ export class SectionFilter implements MultiKeyFilter {
+ 
+         // A tag the user applied wins over being a direct message. A room carrying the invite tag
+         // without a pending invitation belongs to no section.
+-        const tag = this.sectionTags.find((sectionTag) => room.tags[sectionTag]);
++        // [mosaix] Personal tags still win; managed rooms otherwise go to their category
++        const tag = pickSectionTag(room, this.sectionTags, this.managedTags.get(room.roomId));
+         if (tag) return tag === DefaultTagID.Invite ? undefined : tag;
+ 
+         const isDm = this.hasPeopleSection && !!DMRoomMap.shared().getUserIdForRoomId(room.roomId);
+diff --git a/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts b/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
+index 32bcb06..4a3cdab 100644
+--- a/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
++++ b/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
+@@ -5,6 +5,7 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
+ Please see LICENSE files in the repository root for full details.
+ */
+ 
++import { getManagedRoomName, isVirtualManagedSection } from "../../mosaix/private-voice/roomList";
+ import {
+     BaseViewModel,
+     RoomNotifState,
+@@ -388,7 +389,8 @@ export class RoomListItemViewModel
+         return {
+             id: room.roomId,
+             room,
+-            name: room.name,
++            // [mosaix] Name from the server-managed configuration, if any
++            name: getManagedRoomName(room),
+             isBold: notifState.hasAnyNotificationOrActivity,
+             messagePreview,
+             notification: {
+@@ -535,6 +537,8 @@ export class RoomListItemViewModel
+                 // Exclude the Chats because the user toggle the other sections to move rooms in and out of the Chats section.
+                 // Also exclude the default sections because they are available as toggles in the main context menu, and we don't want them to be duplicated in the "Move to section" submenu.
+                 .filter((tag) => !isDefaultSectionTag(tag))
++                // [mosaix] Rooms can't be moved into a managed category by hand
++                .filter((tag) => !isVirtualManagedSection(tag, customSectionData))
+                 .map((tag) => ({
+                     tag,
+                     name: RoomListItemViewModel.getSectionName(tag, customSectionData),
+diff --git a/apps/web/src/viewmodels/room-list/RoomListSectionHeaderViewModel.ts b/apps/web/src/viewmodels/room-list/RoomListSectionHeaderViewModel.ts
+index a10ffd8..310e4b0 100644
+--- a/apps/web/src/viewmodels/room-list/RoomListSectionHeaderViewModel.ts
++++ b/apps/web/src/viewmodels/room-list/RoomListSectionHeaderViewModel.ts
+@@ -5,6 +5,7 @@
+  * Please see LICENSE files in the repository root for full details.
+  */
+ 
++import { isVirtualManagedSection } from "../../mosaix/private-voice/roomList";
+ import { type Room } from "matrix-js-sdk/src/matrix";
+ import { CallType } from "matrix-js-sdk/src/webrtc/call";
+ import {
+@@ -44,6 +45,8 @@ import throttle from "lodash/throttle";
+ function getAcceptedRoomKind(tag: string): AcceptedRoomKind {
+     // Membership decides what is in the Invites section, so rooms can't be moved into it
+     if (tag === DefaultTagID.Invite) return "none";
++    // [mosaix] The server decides what is in a managed category
++    if (isVirtualManagedSection(tag, getCustomSectionData())) return "none";
+     if (tag === DefaultTagID.DM) return "dm";
+     if (tag === CHATS_TAG) {
+         // Chats holds the direct messages too when the People section is not shown. The setting is
+@@ -84,7 +87,8 @@ export class RoomListSectionHeaderViewModel
+             title: props.title,
+             isExpanded: isSectionExpanded(props.spaceId, props.tag),
+             isUnread: false,
+-            displaySectionMenu: !isDefaultSection,
++            // [mosaix] Managed categories can't be renamed or removed here
++            displaySectionMenu: !isDefaultSection && !isVirtualManagedSection(props.tag, getCustomSectionData()),
+             canBeReordered: isReorderableSection(props.tag, getCustomSectionData()),
+             acceptedRoomKind: getAcceptedRoomKind(props.tag),
+         });
+diff --git a/apps/web/src/viewmodels/room-list/RoomListViewModel.ts b/apps/web/src/viewmodels/room-list/RoomListViewModel.ts
+index cd3159a..2b75396 100644
+--- a/apps/web/src/viewmodels/room-list/RoomListViewModel.ts
++++ b/apps/web/src/viewmodels/room-list/RoomListViewModel.ts
+@@ -46,6 +46,7 @@ import {
+     CHATS_TAG,
+ } from "../../stores/room-list-v3/section";
+ import { tagRoom } from "../../utils/room/tagRoom";
++import { getManagedSectionTitle } from "../../mosaix/private-voice/roomList";
+ import { getSectionTagForRoom } from "../../utils/room/getSectionTagForRoom";
+ import SettingsStore from "../../settings/SettingsStore";
+ import { type RoomViewStore } from "../../stores/RoomViewStore.tsx";
+@@ -119,7 +120,13 @@ function getSectionTitle(tag: string): string {
+                 ? _t("common|rooms")
+                 : _t("room_list|section|chats");
+         default:
+-            return (isCustomSectionTag(tag) && getCustomSectionData()[tag]?.name) || tag;
++            // [mosaix] Names of server-managed categories
++            return (
++                getManagedSectionTitle(
++                    tag,
++                    (isCustomSectionTag(tag) && getCustomSectionData()[tag]?.name) || undefined,
++                ) || tag
++            );
+     }
+ }
+ 

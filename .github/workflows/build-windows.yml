@@ -1,10 +1,12 @@
 # Builds Mosaix for Windows 11 x64.
 #
 #  1. element-call: tests and builds our Element Call (embedded widget)
-#  2. webapp:       official Element Web release + our Element Call + config
-#  3. desktop-test: Element Desktop's own unit tests (unmodified upstream)
-#  4. windows:      packages the Electron app (NSIS installer + portable zip)
-#  5. release:      on tags v*, publishes a GitHub release with the installer
+#  2. element-web:  Element Web from source with our changes (element-web/),
+#                   their unit tests and the affected upstream tests
+#  3. webapp:       that Element Web build + our Element Call + config
+#  4. desktop-test: Element Desktop's own unit tests (unmodified upstream)
+#  5. windows:      packages the Electron app (NSIS installer + portable zip)
+#  6. release:      on tags v*, publishes a GitHub release with the installer
 #
 # Upstream versions are pinned in upstream.json. Third-party actions are pinned
 # to commit SHAs.
@@ -68,9 +70,72 @@ jobs:
                   if-no-files-found: error
                   retention-days: 7
 
+    element-web:
+        name: Element Web (patch, test & build)
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - name: Fetch Element Web sources and apply Mosaix changes
+              shell: bash
+              run: |
+                  TAG=$(node -p "require('./upstream.json').elementWeb.tag")
+                  git clone --depth 1 --branch "$TAG" https://github.com/element-hq/element-web build/element-web
+                  node scripts/element-web.mjs apply build/element-web
+
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  package_json_file: build/element-web/package.json
+
+            # As upstream's setup-node-pnpm action: a git dependency is built in the pnpm
+            # store, which must not be below a node_modules directory
+            - name: Keep the pnpm store out of node_modules
+              run: echo "pnpm_config_store_dir=${RUNNER_TEMP}/pnpm-store" >> "$GITHUB_ENV"
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+              with:
+                  node-version-file: build/element-web/.node-version
+                  cache: pnpm
+                  cache-dependency-path: build/element-web/pnpm-lock.yaml
+
+            - name: Install dependencies
+              working-directory: build/element-web
+              run: pnpm install --frozen-lockfile
+
+            - name: Type check
+              working-directory: build/element-web/apps/web
+              run: pnpm exec nx run-many -t test:unit:prepare -p && pnpm exec tsc --noEmit
+
+            - name: Unit tests (Mosaix and the upstream code it changes)
+              working-directory: build/element-web/apps/web
+              run: >
+                  pnpm exec vitest run --project unit
+                  src/mosaix
+                  src/stores/room-list-v3
+                  src/viewmodels/room-list
+                  src/components/views/rooms/RoomHeader
+                  src/stores/RoomViewStore.test.ts
+                  src/models/Call.test.ts
+
+            - name: Build web app
+              working-directory: build/element-web/apps/web
+              run: pnpm run build
+              env:
+                  CI_PACKAGE: true
+                  NODE_OPTIONS: --max-old-space-size=8192
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: element-web-build
+                  path: build/element-web/apps/web/webapp
+                  if-no-files-found: error
+                  retention-days: 7
+
     webapp:
         name: Assemble web app
-        needs: element-call
+        needs: [element-call, element-web]
         runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -82,12 +147,17 @@ jobs:
                   name: element-call-embedded
                   path: element-call/dist
 
+            - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+              with:
+                  name: element-web-build
+                  path: build/element-web-build
+
             - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
               with:
                   node-version: 24
 
-            - name: Download Element Web, verify and add our Element Call
-              run: node scripts/prepare-webapp.mjs --out build/webapp
+            - name: Add our Element Call and config
+              run: node scripts/prepare-webapp.mjs --from build/element-web-build --out build/webapp
 
             - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               with:
