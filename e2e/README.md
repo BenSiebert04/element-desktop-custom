@@ -15,8 +15,9 @@ cd element-call && pnpm install --frozen-lockfile && cd ..
 e2e/setup.sh      # einmalig: Downloads, Synapse-Konfiguration, Element-Call-Build
 e2e/start.sh      # Backend starten
 node e2e/call-layout.e2e.mjs   # Test 1: Element Call standalone (Screenshots in e2e/results/)
-node scripts/prepare-webapp.mjs # Webapp wie in der Desktop-App zusammenbauen
+node scripts/prepare-webapp.mjs --from <Element-Web-Build>  # Webapp wie in der Desktop-App (docs/UPDATING.md)
 node e2e/element-web.e2e.mjs   # Test 2: echte Element-Web-App mit unserem Widget
+node e2e/private-voice.e2e.mjs # Test 3: Private Voice in der echten Element-Web-App
 e2e/stop.sh
 ```
 
@@ -43,3 +44,23 @@ Hinweis: Synapse läuft hier mit Raumversion 10 als Standard, weil die
 Raumerstellung im Standalone-Modus von Element Call 0.26 mit Raumversion 12
 nicht kompatibel ist. In der Desktop-App erstellt Element Web den Raum, dort
 betrifft das nicht.
+
+## Test 3: Private Voice
+
+`private-voice-setup.py` legt auf dem lokalen Synapse einen Space mit vier
+Kategorie-Unterspaces, verwalteten Text- und Sprachräumen, einem
+unverwalteten Raum und einem Direktchat an (synthetische Daten). Der Test
+meldet sich über Element Web an, schreibt die Konfiguration dann – wie die
+Serverseite – in die Account-Daten und prüft die gerenderte Oberfläche:
+
+1. Ohne Konfiguration: normale Ansicht, Anruf-Buttons vorhanden.
+2. Konfiguration kommt live an: vier Kategorien in Manifest-Reihenfolge,
+   jeder Raum genau einmal mit konfiguriertem Namen.
+3. Verwalteter Textraum: keine (auch keine ausgegrauten) Anruf-Buttons,
+   Verlauf von vorher sichtbar, Nachrichten senden geht, „Discord: Text“.
+4. Verwalteter Sprachraum: Lobby, kein automatischer Beitritt; nach Beitritt
+   laufen Kamera und Bildschirmfreigabe.
+5. Unverwalteter Direktchat: Sprach- und Videoanruf-Buttons aktiv.
+6. Konfiguration entfernt: normale Ansicht zurück, Verlauf erhalten.
+
+Screenshots: `e2e/results/private-voice-*.png`.

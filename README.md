@@ -5,11 +5,16 @@
 Ein Matrix-Client für Windows auf Basis von **Element Desktop** mit einem frei
 konfigurierbaren Anruf-Layout: mehrere Bildschirmübertragungen gleichzeitig,
 einzeln ausblendbare Teilnehmer, verschiebbare und skalierbare Kacheln,
-Layout-Voreinstellungen und gespeicherte Layouts.
+Layout-Voreinstellungen und gespeicherte Layouts. Dazu **Private Voice**:
+eine vom Server in den Account-Daten gepflegte Konfiguration ordnet Räume
+eines Spaces in Kategorien, trennt Text- und Sprachräume und kennzeichnet
+Discord-Brücken ([docs/PRIVATE_VOICE.md](docs/PRIVATE_VOICE.md)).
 
-> Dies ist kein offizielles Produkt von Element. Es basiert auf dem
-> unveränderten Element Web/Desktop v1.12.32 und einem angepassten
-> Element Call v0.26.1. Dein Homeserver muss nicht verändert werden.
+> Dies ist kein offizielles Produkt von Element. Es basiert auf Element
+> Web/Desktop v1.12.32 (Element Web mit kleinen Änderungen für Private Voice)
+> und einem angepassten Element Call v0.26.1. Dein Homeserver muss nicht
+> verändert werden; ohne Private-Voice-Konfiguration verhält sich Mosaix wie
+> Element.
 
 ## Projektstatus: privates Projekt, kein Support
 
@@ -27,6 +32,7 @@ Nutzung auf eigene Verantwortung, ohne Gewährleistung (siehe [LICENSE](LICENSE)
 ## Dokumentation
 
 - Architektur und Designentscheidungen: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Private Voice (Kategorien, Text-/Sprachräume): [docs/PRIVATE_VOICE.md](docs/PRIVATE_VOICE.md)
 - Installation, Anmeldung, Bedienung: [docs/INSTALL.md](docs/INSTALL.md)
 - Upstream-Updates einspielen: [docs/UPDATING.md](docs/UPDATING.md)
 - Tests und bekannte Einschränkungen: [docs/TESTING.md](docs/TESTING.md)
@@ -81,8 +87,10 @@ oder Linux, Node 24, pnpm 11):
 
 ```sh
 cd element-call && pnpm install --frozen-lockfile && pnpm build:embedded && cd ..
-node scripts/prepare-webapp.mjs
 git clone --depth 1 --branch v1.12.32 https://github.com/element-hq/element-web build/element-web
+node scripts/element-web.mjs apply build/element-web
+(cd build/element-web && pnpm install --frozen-lockfile && cd apps/web && pnpm run build)
+node scripts/prepare-webapp.mjs --from build/element-web/apps/web/webapp
 node scripts/prepare-desktop.mjs build/element-web/apps/desktop --webapp build/webapp
 cd build/element-web/apps/desktop
 pnpm install --frozen-lockfile --filter element-desktop

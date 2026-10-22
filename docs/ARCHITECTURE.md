@@ -31,24 +31,50 @@ Seit kurzem gibt es zusätzlich ein Labs-Flag `feature_element_call_react`, mit
 dem Element Web Element Call als React-Komponente einbindet. Standard ist aber
 weiterhin das iframe-Widget, und dieses passen wir an.
 
-## Entscheidung: Änderungen nur in Element Call
+## Entscheidung: Wo wird geändert?
 
-**Alle Funktionen sind vollständig innerhalb von Element Call implementiert.**
-Element Web und Element Desktop werden **nicht** im Quellcode verändert:
+- **Call-Layout:** vollständig in Element Call (git subtree, siehe unten).
+- **Private Voice** (Raumliste, Kopfzeile, Lobby; siehe
+  [PRIVATE_VOICE.md](PRIVATE_VOICE.md)): in Element Web. Die Modul-API von
+  Element Web reicht dafür nicht (keine Raumlisten-Abschnitte, keine
+  Anruf-Buttons pro Raum). Element Web wird deshalb **aus dem Quellcode** des
+  Tags in `upstream.json` gebaut, mit unseren Änderungen (siehe
+  [Element Web](#element-web)). Der Ordner `widgets/element-call/` wird
+  danach durch unseren Element-Call-Build ersetzt und eine eigene
+  `config.json` hinzugefügt.
+- **Element Desktop** wird unverändert aus dem offiziellen Tag gebaut.
+  Branding (Name, App-ID, Protokoll, Icon) erfolgt über den vorgesehenen
+  Mechanismus „Variant“ (`VARIANT_PATH`) und zusätzliche Dateien. Die
+  Windows-Paketierung überschreibt nur die `win`/`nsis`-Einstellungen in einer
+  eigenen electron-builder-Konfiguration, die die Upstream-Konfiguration
+  importiert.
 
-- Element Web wird als **offizielles, vorkompiliertes Release-Archiv**
-  (`element-v1.12.32.tar.gz`, SHA-256 in `upstream.json` fixiert) verwendet.
-  Nur der Ordner `widgets/element-call/` wird durch unseren Build ersetzt und
-  eine eigene `config.json` hinzugefügt.
-- Element Desktop wird aus dem offiziellen Tag gebaut. Branding (Name, App-ID,
-  Protokoll, Icon) erfolgt über den vorgesehenen Mechanismus „Variant“
-  (`VARIANT_PATH`) und zusätzliche Dateien. Die Windows-Paketierung
-  überschreibt nur die `win`/`nsis`-Einstellungen in einer eigenen
-  electron-builder-Konfiguration, die die Upstream-Konfiguration importiert.
+## Element Web
 
-Das ist die Variante mit dem geringsten Wartungsaufwand: Ein Element-Update
-erfordert normalerweise nur das Anpassen von `upstream.json`; Merge-Konflikte
-können ausschließlich im Element-Call-Teil auftreten.
+Unsere Änderungen an Element Web liegen nicht als Fork, sondern als
+
+- `element-web/overlay/` – neue Dateien (`apps/web/src/mosaix/…`), werden
+  unverändert in den Checkout kopiert, und
+- `element-web/patches/mosaix.patch` – kleine Eingriffe in bestehende Dateien,
+  jeweils mit `[mosaix]` markiert.
+
+`node scripts/element-web.mjs apply <checkout>` wendet beides auf einen
+frischen Checkout des Tags an; `… export <checkout>` schreibt Änderungen aus
+einem Entwicklungs-Checkout zurück (Paketdateien und Lockfile nie).
+
+| Datei (in `apps/web/src`)                                   | Änderung |
+| ----------------------------------------------------------- | -------- |
+| `stores/room-list-v3/section.ts`                            | Kategorien des aktiven Spaces als Abschnitte einfügen |
+| `stores/room-list-v3/skip-list/filters/SectionFilter.ts`    | Raum → Kategorie-Abschnitt (persönliche Tags haben Vorrang) |
+| `stores/room-list-v3/RoomListStoreV3.ts`                    | bei Konfigurations- oder Space-Wechsel Abschnitte neu aufbauen |
+| `viewmodels/room-list/RoomListViewModel.ts`                 | Abschnittsnamen aus der Konfiguration |
+| `viewmodels/room-list/RoomListSectionHeaderViewModel.ts`    | verwaltete Abschnitte ohne Menü / Drag-Ziel |
+| `viewmodels/room-list/RoomListItemViewModel.ts`             | Raumname aus der Konfiguration (live), nicht „Verschieben nach“ verwaltete Abschnitte |
+| `components/views/rooms/RoomHeader/RoomHeader.tsx`          | Name, Kennzeichnungen, keine Anruf-Buttons in verwalteten Texträumen |
+| `stores/RoomViewStore.tsx`                                  | verwaltete Sprachräume öffnen die Anrufansicht |
+| `models/Call.ts`                                            | dort Lobby statt Direktbeitritt, Audio-Absicht |
+| `i18n/strings/en_EN.json`, `de_DE.json`                     | Texte unter `mosaix.private_voice` |
+| `models/Call.test.ts`, `stores/RoomViewStore.test.ts`, `viewmodels/room-list/RoomListItemViewModel.test.ts` | zusätzliche Tests |
 
 ## Repository-Aufbau
 
@@ -56,9 +82,10 @@ können ausschließlich im Element-Call-Teil auftreten.
 element-desktop-custom/
 ├── element-call/               Element Call v0.26.1 als git subtree (+ unsere Commits)
 │   └── src/custom-layout/      ← neuer Code des erweiterten Call-Layouts
+├── element-web/                unsere Änderungen an Element Web (overlay/ + patches/)
 ├── branding/                   variant.json, config.json, Icons
 ├── desktop/electron-builder.custom.ts   Windows-Installer (NSIS + Zip)
-├── scripts/                    prepare-webapp.mjs, prepare-desktop.mjs, generate-icons.py
+├── scripts/                    element-web.mjs, prepare-webapp.mjs, prepare-desktop.mjs, generate-icons.py
 ├── upstream.json               gepinnte Upstream-Versionen
 └── .github/workflows/build-windows.yml
 ```

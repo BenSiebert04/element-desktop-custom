@@ -12,6 +12,9 @@
 | Upstream Element Desktop | Unit-Tests von `apps/desktop` (v1.12.32) | ja | Regressionstest Desktop-Hauptprozess mit unserem Branding |
 | End-to-End | `e2e/call-layout.e2e.mjs` | nein (lokal, Linux) | echter Anruf über LiveKit mit 3 Browsern und 2 Screenshares |
 | End-to-End | `e2e/element-web.e2e.mjs` | nein (lokal, Linux) | ausgelieferte Webapp (Element Web + unser Widget), verschlüsselter Raum, Nachricht, Anruf aus der Raum-Kopfzeile |
+| Private Voice | `element-web/overlay/apps/web/src/mosaix/private-voice/*.test.ts(x)` | ja | Parser (fehlend, ungültig, neuere Version, falsche user_id, unbekannte Felder, Unicode, Kategorie `null`, Duplikate, Room-IDs ohne Doppelpunkt), Store (initial + live, gleiche Revision, Kontowechsel/Abmeldung, Offline-Cache als „stale“, Entfernen nach erfolgreichem Sync, Homeserver-Beschränkung), Raumliste (Kategorien, Reihenfolge, keine Duplikate, Favoriten/eigene Abschnitte bleiben), Kopfzeile (keine Anruf-Buttons im Textraum, DM unverändert, Brücken-Kennzeichnung) |
+| Upstream Element Web | Tests der geänderten Bereiche (Raumliste v3, Raumlisten-ViewModels, RoomHeader, RoomViewStore, Call) | ja | Regressionstest plus zusätzliche `[mosaix]`-Tests |
+| End-to-End | `e2e/private-voice.e2e.mjs` | nein (lokal, Linux) | gerenderte Element-Web-App: vier Kategorien live, Textraum ohne Anruf-Buttons mit Verlauf, Sprachraum-Lobby + Kamera + Bildschirmfreigabe, DM mit Anruf-Buttons, Entfernen |
 
 Zusätzlich wurde der fertige Windows-Build aus CI heruntergeladen und geprüft:
 `webapp.asar` enthält das angepasste Element Call, `config.json` hat kein
