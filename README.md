@@ -54,7 +54,14 @@ In der Anrufansicht gibt es unten links die Schaltfläche **„Layout anpassen�
 
 Direkt an jeder Kachel (beim Darüberfahren und im Rechtsklick-/„…“-Menü):
 Anheften, Maximieren (auch per Doppelklick), Vollbild, Ausblenden,
-Teilnehmer komplett ausblenden.
+Teilnehmer komplett ausblenden, **Transparenz** (0–90 %). Im freien Layout
+außerdem **In den Vordergrund / In den Hintergrund** und **Ebene** (0–9): Eine
+Kachel auf einer höheren Ebene liegt immer vor Kacheln niedrigerer Ebenen.
+Auch in der Standardansicht öffnet das Rechtsklick-Menü „Layout anpassen“.
+
+**Lautstärke pro Person: 0–200 %** (Rechtsklick auf die Kachel), für Stimme
+und Bildschirmton getrennt. Der Wert wird pro Matrix-ID gespeichert und gilt
+in jedem späteren Anruf mit dieser Person wieder.
 
 Mit der Maus:
 
@@ -67,10 +74,12 @@ Mit der Maus:
 
 Ausblenden ist **rein lokal**: Ausgeblendete Personen bleiben im Anruf und
 sind weiter hörbar; nichts wird an den Server oder andere Teilnehmer gesendet.
-Für ausgeblendete Videos stoppt LiveKit automatisch den Videoempfang.
+Für ausgeblendete Videos stoppt LiveKit automatisch den Videoempfang. Der
+Hinweis „n ausgeblendet“ erscheint nur, solange die Maus über dem Anruf
+bewegt wird, und verschwindet 5 Sekunden danach.
 
-Einstellungen werden pro Raum lokal gespeichert, optional mit einem globalen
-Standard.
+Layout-Einstellungen werden pro Raum lokal gespeichert, optional mit einem
+globalen Standard; Lautstärken pro Person.
 
 ## Download
 

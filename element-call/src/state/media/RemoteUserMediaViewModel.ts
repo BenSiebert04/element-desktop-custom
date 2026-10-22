@@ -18,6 +18,8 @@ import {
   createBaseUserMedia,
 } from "./UserMediaViewModel";
 import { type ObservableScope } from "../ObservableScope";
+import { getVolumeStorage } from "../../custom-layout/volumeStorage";
+import { setPlaybackVolume } from "../../custom-layout/playbackVolume";
 
 export interface RemoteUserMediaViewModel
   extends BaseUserMediaViewModel, VolumeControls {
@@ -65,8 +67,15 @@ export function createRemoteUserMedia(
     ...createVolumeControls(scope, {
       pretendToBeDisconnected$,
       sink$: scope.behavior(
-        inputs.participant$.pipe(map((p) => (volume) => p?.setVolume(volume))),
+        inputs.participant$.pipe(
+          // [element-custom] Volumes above 100 %
+          map((p) => (volume) => p && setPlaybackVolume(p, volume)),
+        ),
       ),
+      // [element-custom] Remember the volume per person across calls
+      initialVolume: getVolumeStorage().load(inputs.userId, "microphone"),
+      onVolumeCommitted: (volume) =>
+        getVolumeStorage().save(inputs.userId, "microphone", volume),
     }),
     local: false,
     speaking$: scope.behavior(

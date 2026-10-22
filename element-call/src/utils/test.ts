@@ -553,6 +553,8 @@ export const mockTrack = (
         setAudioContext: vi.fn(),
         setWebAudioPlugins: vi.fn(),
         setVolume: vi.fn(),
+        // [element-custom]
+        getVolume: vi.fn().mockReturnValue(1),
       },
     },
     track: {},

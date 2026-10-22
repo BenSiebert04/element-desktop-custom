@@ -28,6 +28,8 @@ import {
   type PresetId,
   RATIO_LIMITS,
   type RatioId,
+  sanitizeLayer,
+  sanitizeOpacity,
   standardViewConfig,
   type StreamDescriptor,
 } from "./layoutConfig";
@@ -79,7 +81,14 @@ export interface CustomLayoutViewModel {
   setRatio: (id: RatioId, value: number) => void;
   /** Moves/resizes a tile of the free layout. */
   setFreeRect: (key: string, rect: Omit<FreeRect, "z">) => void;
+  /** Brings a free tile in front of the other tiles of its layer. */
   bringToFront: (key: string) => void;
+  /** Sends a free tile behind the other tiles of its layer. */
+  sendToBack: (key: string) => void;
+  /** Sets how opaque a stream's tile is (OPACITY_MIN..1). */
+  setOpacity: (key: string, opacity: number) => void;
+  /** Moves a stream's tile to a layer (0..LAYER_MAX) of the free layout. */
+  setLayer: (key: string, layer: number) => void;
   /** Makes sure every visible stream has a position in the free layout. */
   ensureFreeRects: (canvas: Size) => void;
   setMaximised: (key: string | null) => void;
@@ -104,6 +113,15 @@ function streamsEqual(a: CustomStream[], b: CustomStream[]): boolean {
     a.map((s) => s.media),
     b.map((s) => s.media),
   );
+}
+
+function withoutKey<T>(
+  record: Record<string, T>,
+  key: string,
+): Record<string, T> {
+  const copy = { ...record };
+  delete copy[key];
+  return copy;
 }
 
 export function createCustomLayoutViewModel(
@@ -288,6 +306,33 @@ export function createCustomLayoutViewModel(
         const top = Math.max(...Object.values(c.rects).map((r) => r.z));
         if (rect.z === top) return c;
         return { ...c, rects: { ...c.rects, [key]: { ...rect, z: top + 1 } } };
+      }),
+    sendToBack: (key) =>
+      update((c) => {
+        const rect = c.rects[key];
+        if (!rect) return c;
+        const bottom = Math.min(...Object.values(c.rects).map((r) => r.z));
+        if (rect.z === bottom) return c;
+        return {
+          ...c,
+          rects: { ...c.rects, [key]: { ...rect, z: bottom - 1 } },
+        };
+      }),
+    setOpacity: (key, opacity) =>
+      update((c) => {
+        const rest = withoutKey(c.opacity, key);
+        const value = sanitizeOpacity(opacity);
+        // Fully opaque is the default and needs no entry
+        return {
+          ...c,
+          opacity: value === 1 ? rest : { ...rest, [key]: value },
+        };
+      }),
+    setLayer: (key, layer) =>
+      update((c) => {
+        const rest = withoutKey(c.layers, key);
+        const value = sanitizeLayer(layer);
+        return { ...c, layers: value === 0 ? rest : { ...rest, [key]: value } };
       }),
     ensureFreeRects: (canvas) => {
       const c = config$.value;

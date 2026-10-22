@@ -78,7 +78,22 @@ export interface CustomLayoutConfig {
   sidebarRatio: number;
   /** Positions in the free layout, by stream key. */
   rects: Record<string, FreeRect>;
+  /**
+   * Opacity of a stream's tile (OPACITY_MIN..1), by stream key. Missing means
+   * fully opaque.
+   */
+  opacity: Record<string, number>;
+  /**
+   * Layer of a stream's tile in the free layout (0..LAYER_MAX), by stream key.
+   * A tile on a higher layer is always in front of tiles on lower layers.
+   * Missing means layer 0.
+   */
+  layers: Record<string, number>;
 }
+
+/** The most transparent a tile can be made (it must stay visible). */
+export const OPACITY_MIN = 0.1;
+export const LAYER_MAX = 9;
 
 export const RATIO_LIMITS: Record<RatioId, [number, number]> = {
   split: [0.15, 0.85],
@@ -98,6 +113,8 @@ export function defaultConfig(): CustomLayoutConfig {
     stripRatio: 0.2,
     sidebarRatio: 0.24,
     rects: {},
+    opacity: {},
+    layers: {},
   };
 }
 
@@ -143,6 +160,35 @@ function sanitizeRect(v: unknown): FreeRect | null {
   };
 }
 
+function numberRecord(
+  v: unknown,
+  sanitize: (n: number) => number,
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  if (typeof v !== "object" || v === null) return result;
+  for (const [key, value] of Object.entries(v))
+    if (isFiniteNumber(value)) result[key] = sanitize(value);
+  return result;
+}
+
+export function sanitizeOpacity(value: number): number {
+  return clamp(value, OPACITY_MIN, 1);
+}
+
+export function sanitizeLayer(value: number): number {
+  return clamp(Math.round(value), 0, LAYER_MAX);
+}
+
+/** The opacity of a stream's tile (1 = opaque). */
+export function streamOpacity(config: CustomLayoutConfig, key: string): number {
+  return config.opacity[key] ?? 1;
+}
+
+/** The layer of a stream's tile in the free layout. */
+export function streamLayer(config: CustomLayoutConfig, key: string): number {
+  return config.layers[key] ?? 0;
+}
+
 /**
  * Turns untrusted (e.g. stored) data into a valid configuration, falling back
  * to defaults for anything missing or malformed.
@@ -173,6 +219,8 @@ export function sanitizeConfig(input: unknown): CustomLayoutConfig {
     stripRatio: ratio(c.stripRatio, "strip", base.stripRatio),
     sidebarRatio: ratio(c.sidebarRatio, "sidebar", base.sidebarRatio),
     rects,
+    opacity: numberRecord(c.opacity, sanitizeOpacity),
+    layers: numberRecord(c.layers, sanitizeLayer),
   };
 }
 

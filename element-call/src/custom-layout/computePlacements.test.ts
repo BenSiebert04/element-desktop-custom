@@ -18,6 +18,7 @@ import {
 import {
   type CustomLayoutConfig,
   defaultConfig,
+  type FreeRect,
   type StreamDescriptor,
 } from "./layoutConfig";
 
@@ -407,5 +408,31 @@ describe("gridCells", () => {
     const cells = gridCells(3, { x: 0, y: 0, w: 1000, h: 1000 });
     // 2 columns, 2 rows; the third cell sits in the middle
     expect(cells[2].x + cells[2].w / 2).toBeCloseTo(500);
+  });
+});
+
+describe("layers in the free layout", () => {
+  const a = cam("alice");
+  const b = cam("bob");
+  const c = screen("carol");
+  const rect = (z: number): FreeRect => ({ x: 0.1, y: 0.1, w: 0.5, h: 0.5, z });
+
+  test("a higher layer is always in front, whatever was brought forward", () => {
+    const tiles = computeLayout(
+      config({
+        preset: "free",
+        // Bob was brought to the front last, but Alice is on layer 1
+        rects: { [a.key]: rect(1), [b.key]: rect(9), [c.key]: rect(5) },
+        layers: { [a.key]: 1 },
+      }),
+      [a, b, c],
+      size,
+    ).tiles;
+    expect(byKey(tiles, a.key).z).toBeGreaterThan(byKey(tiles, b.key).z);
+    expect(byKey(tiles, a.key).z).toBeGreaterThan(byKey(tiles, c.key).z);
+    // Within layer 0 the order of bringing to front still applies
+    expect(byKey(tiles, b.key).z).toBeGreaterThan(byKey(tiles, c.key).z);
+    // Compact stacking order, usable as a z-index
+    expect(tiles.map((t) => t.z).sort((x, y) => x - y)).toEqual([1, 2, 3]);
   });
 });
