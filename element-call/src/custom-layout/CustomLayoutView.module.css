@@ -49,6 +49,8 @@ Please see LICENSE in the repository root for full details.
 
 /* The media tile always fills its frame */
 .frame > .tile {
+  --media-view-border-radius: var(--cpd-space-4x);
+  --hover-space-margin: var(--cpd-space-1x);
   position: absolute;
   inset: 0;
   inline-size: auto !important;
