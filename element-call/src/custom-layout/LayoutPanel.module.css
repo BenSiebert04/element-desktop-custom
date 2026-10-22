@@ -17,7 +17,8 @@ Please see LICENSE in the repository root for full details.
   flex-direction: column;
   gap: var(--cpd-space-5x);
   padding: var(--cpd-space-4x);
-  border: var(--cpd-border-width-1) solid var(--cpd-color-border-interactive-secondary);
+  border: var(--cpd-border-width-1) solid
+    var(--cpd-color-border-interactive-secondary);
   border-radius: var(--cpd-space-3x);
   background: var(--cpd-color-bg-canvas-default);
   color: var(--cpd-color-text-primary);
@@ -66,7 +67,8 @@ Please see LICENSE in the repository root for full details.
   align-items: center;
   gap: var(--cpd-space-1x);
   padding: var(--cpd-space-2x);
-  border: var(--cpd-border-width-1) solid var(--cpd-color-border-interactive-secondary);
+  border: var(--cpd-border-width-1) solid
+    var(--cpd-color-border-interactive-secondary);
   border-radius: var(--cpd-space-2x);
   background: transparent;
   color: var(--cpd-color-text-primary);
@@ -162,7 +164,8 @@ Please see LICENSE in the repository root for full details.
   flex: 1;
   min-inline-size: 0;
   padding: var(--cpd-space-2x) var(--cpd-space-3x);
-  border: var(--cpd-border-width-1) solid var(--cpd-color-border-interactive-primary);
+  border: var(--cpd-border-width-1) solid
+    var(--cpd-color-border-interactive-primary);
   border-radius: var(--cpd-space-2x);
   background: var(--cpd-color-bg-canvas-default);
   color: var(--cpd-color-text-primary);

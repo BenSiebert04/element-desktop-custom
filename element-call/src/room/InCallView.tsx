@@ -20,7 +20,7 @@ import {
 import useMeasure from "react-use-measure";
 import { type MatrixRTCSession } from "matrix-js-sdk/lib/matrixrtc";
 import classNames from "classnames";
-import { combineLatest, map } from "rxjs";
+import { map } from "rxjs";
 import { useObservable } from "observable-hooks";
 import { logger as rootLogger } from "matrix-js-sdk/lib/logger";
 import { useTranslation } from "react-i18next";
@@ -94,6 +94,7 @@ import { RingingAudioRenderer } from "./RingingAudioRenderer.tsx";
 import {
   createCustomLayoutViewModel,
   type CustomLayoutViewModel,
+  layoutSwitchUnlessCustom$,
 } from "../custom-layout/CustomLayoutViewModel.ts";
 import { defaultLayoutStorage } from "../custom-layout/layoutStorage.ts";
 import { CustomLayoutView } from "../custom-layout/CustomLayoutView.tsx";
@@ -209,12 +210,10 @@ export const ActiveCall: FC<ActiveCallProps> = (props) => {
         ...vm,
         // Element Call's own grid/spotlight switch only applies to its
         // standard view, so hide it while the custom layout is active
-        layoutSwitchVm$: scope.behavior(
-          combineLatest(
-            [vm.layoutSwitchVm$, customLayoutVm.active$],
-            (layoutSwitchVm, customActive) =>
-              customActive ? null : layoutSwitchVm,
-          ),
+        layoutSwitchVm$: layoutSwitchUnlessCustom$(
+          scope,
+          vm.layoutSwitchVm$,
+          customLayoutVm.active$,
         ),
       },
       props.muteStates,

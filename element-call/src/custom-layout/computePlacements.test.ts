@@ -72,7 +72,13 @@ function expectNoOverlap(tiles: Rect[]) {
 }
 
 describe("two screen shares at the same time", () => {
-  const streams = [cam("alice"), cam("bob"), cam("carol"), screen("alice"), screen("bob")];
+  const streams = [
+    cam("alice"),
+    cam("bob"),
+    cam("carol"),
+    screen("alice"),
+    screen("bob"),
+  ];
 
   test.each(["auto", "two-streams"] as const)(
     "%s shows both screen shares large side by side, cameras small below",
@@ -127,7 +133,11 @@ describe("two screen shares at the same time", () => {
 describe("four streams", () => {
   test("in a 2x2 grid of equal size", () => {
     const streams = [screen("a"), screen("b"), cam("c"), cam("d")];
-    const { tiles } = computeLayout(config({ preset: "four-streams" }), streams, size);
+    const { tiles } = computeLayout(
+      config({ preset: "four-streams" }),
+      streams,
+      size,
+    );
     expect(tiles).toHaveLength(4);
     const ws = new Set(tiles.map((t) => Math.round(t.w)));
     const hs = new Set(tiles.map((t) => Math.round(t.h)));
@@ -140,8 +150,19 @@ describe("four streams", () => {
   });
 
   test("additional streams go to the strip", () => {
-    const streams = [cam("a"), cam("b"), cam("c"), cam("d"), cam("e"), cam("f")];
-    const { tiles } = computeLayout(config({ preset: "four-streams" }), streams, size);
+    const streams = [
+      cam("a"),
+      cam("b"),
+      cam("c"),
+      cam("d"),
+      cam("e"),
+      cam("f"),
+    ];
+    const { tiles } = computeLayout(
+      config({ preset: "four-streams" }),
+      streams,
+      size,
+    );
     expect(tiles.filter((t) => t.role === "primary")).toHaveLength(4);
     expect(tiles.filter((t) => t.role === "secondary")).toHaveLength(2);
     expectNoOverlap(tiles);
@@ -182,7 +203,11 @@ describe("hiding", () => {
   });
 
   test("camera and screen share of the same user are independent", () => {
-    const hideCam = computeLayout(config({ hidden: [cam("alice").key] }), streams, size);
+    const hideCam = computeLayout(
+      config({ hidden: [cam("alice").key] }),
+      streams,
+      size,
+    );
     expect(hideCam.tiles.map((t) => t.key)).toContain(screen("alice").key);
     expect(hideCam.tiles.map((t) => t.key)).not.toContain(cam("alice").key);
 
@@ -192,7 +217,9 @@ describe("hiding", () => {
       size,
     );
     expect(hideScreen.tiles.map((t) => t.key)).toContain(cam("alice").key);
-    expect(hideScreen.tiles.map((t) => t.key)).not.toContain(screen("alice").key);
+    expect(hideScreen.tiles.map((t) => t.key)).not.toContain(
+      screen("alice").key,
+    );
   });
 
   test("pinned cameras stay visible when all cameras are hidden", () => {
@@ -217,16 +244,20 @@ describe("hiding", () => {
 });
 
 describe("no screen share", () => {
-  test.each(["auto", "two-streams", "four-streams", "main-sidebar", "grid", "free"] as const)(
-    "%s lays out cameras only",
-    (preset) => {
-      const streams = [cam("a"), cam("b"), cam("c")];
-      const { tiles } = computeLayout(config({ preset }), streams, size);
-      expect(tiles).toHaveLength(3);
-      expectInside(tiles, size);
-      if (preset !== "free") expectNoOverlap(tiles);
-    },
-  );
+  test.each([
+    "auto",
+    "two-streams",
+    "four-streams",
+    "main-sidebar",
+    "grid",
+    "free",
+  ] as const)("%s lays out cameras only", (preset) => {
+    const streams = [cam("a"), cam("b"), cam("c")];
+    const { tiles } = computeLayout(config({ preset }), streams, size);
+    expect(tiles).toHaveLength(3);
+    expectInside(tiles, size);
+    if (preset !== "free") expectNoOverlap(tiles);
+  });
 
   test("auto puts all cameras in a grid of equal tiles", () => {
     const streams = [cam("a"), cam("b"), cam("c"), cam("d")];
@@ -256,7 +287,15 @@ describe("pinning and maximising", () => {
     const streams = [screen("a"), cam("b")];
     const { tiles } = computeLayout(config({}), streams, size, cam("b").key);
     expect(tiles).toEqual([
-      { key: cam("b").key, role: "maximised", x: 0, y: 0, w: 1600, h: 900, z: 0 },
+      {
+        key: cam("b").key,
+        role: "maximised",
+        x: 0,
+        y: 0,
+        w: 1600,
+        h: 900,
+        z: 0,
+      },
     ]);
   });
 
@@ -281,7 +320,13 @@ describe("window size changes", () => {
     { width: 400, height: 300 },
   ];
 
-  test.each(["auto", "grid", "two-streams", "four-streams", "main-sidebar"] as const)(
+  test.each([
+    "auto",
+    "grid",
+    "two-streams",
+    "four-streams",
+    "main-sidebar",
+  ] as const)(
     "%s stays inside the canvas without overlaps at every size",
     (preset) => {
       for (const s of sizes) {
@@ -337,10 +382,23 @@ describe("free layout", () => {
 
   test("seeded rects keep tiles where they were", () => {
     const seed: Placement[] = [
-      { key: cam("a").key, role: "primary", x: 160, y: 90, w: 800, h: 450, z: 0 },
+      {
+        key: cam("a").key,
+        role: "primary",
+        x: 160,
+        y: 90,
+        w: 800,
+        h: 450,
+        z: 0,
+      },
     ];
     const rects = completeFreeRects({}, [cam("a")], size, seed);
-    expect(rects[cam("a").key]).toMatchObject({ x: 0.1, y: 0.1, w: 0.5, h: 0.5 });
+    expect(rects[cam("a").key]).toMatchObject({
+      x: 0.1,
+      y: 0.1,
+      w: 0.5,
+      h: 0.5,
+    });
   });
 });
 

@@ -9,7 +9,10 @@ import { logger as rootLogger } from "matrix-js-sdk/lib/logger";
 
 import { type CustomLayoutConfig, sanitizeConfig } from "./layoutConfig";
 
-const logger = rootLogger.getChild("[CustomLayoutStorage]");
+const logger = {
+  warn: (...args: unknown[]): void =>
+    rootLogger.getChild("[CustomLayoutStorage]").warn(...args),
+};
 
 /**
  * Minimal key/value interface so that the storage can be swapped out in tests.

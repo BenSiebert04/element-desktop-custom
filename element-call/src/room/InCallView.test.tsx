@@ -52,6 +52,7 @@ import { type MatrixInfo } from "./VideoPreview";
 import { ProcessorProvider } from "../livekit/TrackProcessorContext";
 import { initializeWidget } from "../widget";
 import { RootElementProvider } from "../RootElementContext";
+import { constant } from "../state/Behavior";
 import { testScope } from "../utils/test";
 import {
   createCustomLayoutViewModel,
@@ -142,6 +143,8 @@ interface CreateInCallViewArgs {
    * Element Call's standard view.
    */
   customLayout?: Partial<CustomLayoutConfig>;
+  /** Overrides of individual call view model members. */
+  vmOverrides?: Partial<CallViewModel>;
 }
 
 export function memoryStore(): KeyValueStore {
@@ -167,13 +170,14 @@ function createInCallView(args: CreateInCallViewArgs = {}): RenderResult & {
       remoteParticipants$: of([remoteParticipant]),
     },
   );
-  const { vm, footerVm, developerSettingsVm, rtcSession } =
-    getBasicCallViewModelEnvironment(
-      [local, alice],
-      undefined,
-      mediaDevices,
-      args.callViewModelOptions,
-    );
+  const env = getBasicCallViewModelEnvironment(
+    [local, alice],
+    undefined,
+    mediaDevices,
+    args.callViewModelOptions,
+  );
+  const { footerVm, developerSettingsVm, rtcSession } = env;
+  const vm: CallViewModel = { ...env.vm, ...args.vmOverrides };
 
   rtcSession.joined = true;
   const room = rtcSession.room;
@@ -274,6 +278,81 @@ describe("InCallView", () => {
       // Clicking the button should call select -> switchFn with the earpiece device id
       expect(switchFn).toHaveBeenCalledWith("earpiece-id");
     });
+  });
+});
+
+describe("InCallView with the custom layout", () => {
+  it("replaces the standard grid while a custom preset is active", () => {
+    const { container, queryByTestId } = createInCallView({
+      customLayout: { preset: "auto" },
+    });
+    expect(queryByTestId("custom-layout")).not.toBeNull();
+    const tiles = container.querySelectorAll(
+      '[data-testid="custom-layout-tile"]',
+    );
+    expect(tiles.length).toBeGreaterThan(0);
+  });
+
+  it("keeps a hidden participant audible", () => {
+    const livekitRoomItems = [
+      {
+        livekitRoom: mockLivekitRoom({ localParticipant }),
+        url: "https://sfu.example.org",
+        participants: [remoteParticipant.identity],
+      },
+    ];
+    const { container, customLayoutVm, vm } = createInCallView({
+      customLayout: { preset: "auto" },
+      vmOverrides: { livekitRoomItems$: constant(livekitRoomItems) },
+    });
+    const audioRenderer = LivekitRoomAudioRenderer as MockedFunction<
+      typeof LivekitRoomAudioRenderer
+    >;
+    const audioPropsBefore = audioRenderer.mock.lastCall?.[0];
+    expect(audioPropsBefore?.validIdentities).toEqual([
+      remoteParticipant.identity,
+    ]);
+    const before = container.querySelectorAll(
+      '[data-testid="custom-layout-tile"]',
+    ).length;
+    const remote = customLayoutVm.streams$.value.find((s) => !s.local)!;
+    act(() => customLayoutVm.setUserHidden(remote.userId, true));
+    expect(
+      container.querySelectorAll('[data-testid="custom-layout-tile"]'),
+    ).toHaveLength(before - 1);
+    // The participant is still in the call...
+    expect(vm.customLayoutUserMedia$.value.map((m) => m.userId)).toContain(
+      remote.userId,
+    );
+    // ...and the audio of the call is rendered exactly as before, unaffected
+    // by what is shown on screen
+    const audioPropsAfter = audioRenderer.mock.lastCall?.[0];
+    expect(audioPropsAfter?.validIdentities).toEqual(
+      audioPropsBefore?.validIdentities,
+    );
+    expect(audioPropsAfter?.muted).toBe(false);
+  });
+
+  it("opens the layout panel from the footer", async () => {
+    const user = userEvent.setup();
+    const { getByTestId, queryByTestId } = createInCallView({
+      customLayout: { preset: "auto" },
+    });
+    expect(queryByTestId("custom-layout-panel")).toBeNull();
+    await user.click(getByTestId("custom-layout-button"));
+    expect(getByTestId("custom-layout-panel")).toBeVisible();
+  });
+
+  it("restores the standard view completely", async () => {
+    const user = userEvent.setup();
+    const { getByTestId, queryByTestId, container } = createInCallView({
+      customLayout: { preset: "free", hideCameras: true },
+    });
+    await user.click(getByTestId("custom-layout-button"));
+    await user.click(getByTestId("custom-layout-reset"));
+    expect(queryByTestId("custom-layout")).toBeNull();
+    // Element Call's grid is back
+    expect(container.querySelector("[data-layout]")).not.toBeNull();
   });
 });
 

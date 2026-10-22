@@ -128,7 +128,10 @@ export function moveRect(
 ): Rect {
   return {
     ...origin,
-    x: Math.min(Math.max(0, origin.x + dx), Math.max(0, bounds.width - origin.w)),
+    x: Math.min(
+      Math.max(0, origin.x + dx),
+      Math.max(0, bounds.width - origin.w),
+    ),
     y: Math.min(
       Math.max(0, origin.y + dy),
       Math.max(0, bounds.height - origin.h),
@@ -203,9 +206,7 @@ export const CustomLayoutView: FC<Props> = ({
   // The interaction in progress, if any. Kept in a ref for the pointer
   // handlers and mirrored into state for rendering.
   const interactionRef = useRef<Interaction | null>(null);
-  const [interaction, setInteractionState] = useState<Interaction | null>(
-    null,
-  );
+  const [interaction, setInteractionState] = useState<Interaction | null>(null);
   const setInteraction = useCallback((i: Interaction | null) => {
     interactionRef.current = i;
     setInteractionState(i);
@@ -239,7 +240,9 @@ export const CustomLayoutView: FC<Props> = ({
   );
 
   // One tile view model per camera, kept for as long as the media exists
-  const gridTileVms = useRef(new WeakMap<UserMediaViewModel, GridTileViewModel>());
+  const gridTileVms = useRef(
+    new WeakMap<UserMediaViewModel, GridTileViewModel>(),
+  );
   const gridTileVm = (media: UserMediaViewModel): GridTileViewModel => {
     let tileVm = gridTileVms.current.get(media);
     if (!tileVm) {
@@ -282,7 +285,10 @@ export const CustomLayoutView: FC<Props> = ({
     [vm],
   );
 
-  const toLocal = (e: ReactPointerEvent, canvas: HTMLElement): [number, number] => {
+  const toLocal = (
+    e: ReactPointerEvent,
+    canvas: HTMLElement,
+  ): [number, number] => {
     const r = canvas.getBoundingClientRect();
     return [e.clientX - r.left - PADDING, e.clientY - r.top - PADDING];
   };
@@ -293,7 +299,11 @@ export const CustomLayoutView: FC<Props> = ({
   const onTilePointerDown = (e: ReactPointerEvent, tile: Placement): void => {
     if (e.button !== 0 || interactionRef.current) return;
     // Leave clicks on the tile's own controls alone
-    if ((e.target as Element).closest("button, input, [role=menu], [data-no-drag]"))
+    if (
+      (e.target as Element).closest(
+        "button, input, [role=menu], [data-no-drag]",
+      )
+    )
       return;
     if (tile.role === "maximised") return;
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
@@ -317,8 +327,7 @@ export const CustomLayoutView: FC<Props> = ({
     const dx = e.clientX - i.startX;
     const dy = e.clientY - i.startY;
     if (i.type === "move") {
-      const started =
-        i.started || Math.hypot(dx, dy) >= DRAG_THRESHOLD;
+      const started = i.started || Math.hypot(dx, dy) >= DRAG_THRESHOLD;
       if (!started) return;
       const current = moveRect(i.origin, dx, dy, size);
       setInteraction({ ...i, started, current });
@@ -393,7 +402,10 @@ export const CustomLayoutView: FC<Props> = ({
 
   // --- Dividers -----------------------------------------------------------
 
-  const onDividerPointerDown = (e: ReactPointerEvent, divider: Divider): void => {
+  const onDividerPointerDown = (
+    e: ReactPointerEvent,
+    divider: Divider,
+  ): void => {
     if (e.button !== 0 || interactionRef.current) return;
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
     setInteraction({
@@ -405,7 +417,11 @@ export const CustomLayoutView: FC<Props> = ({
   };
   const onDividerPointerMove = (e: ReactPointerEvent): void => {
     const i = interactionRef.current;
-    if (i?.type !== "divider" || i.pointerId !== e.pointerId || !canvasRef.current)
+    if (
+      i?.type !== "divider" ||
+      i.pointerId !== e.pointerId ||
+      !canvasRef.current
+    )
       return;
     const [x, y] = toLocal(e, canvasRef.current);
     const pos = i.divider.orientation === "vertical" ? x : y;
@@ -494,7 +510,12 @@ export const CustomLayoutView: FC<Props> = ({
           />
         ) : (
           <ScreenShareTile
-            vm={stream.media as Extract<CustomStream["media"], { type: "screen share" }>}
+            vm={
+              stream.media as Extract<
+                CustomStream["media"],
+                { type: "screen share" }
+              >
+            }
             className={styles.tile}
             targetWidth={rect.w}
             targetHeight={rect.h}
@@ -513,7 +534,9 @@ export const CustomLayoutView: FC<Props> = ({
           </span>
           <button
             type="button"
-            aria-label={pinned ? t("custom_layout.unpin") : t("custom_layout.pin")}
+            aria-label={
+              pinned ? t("custom_layout.unpin") : t("custom_layout.pin")
+            }
             title={pinned ? t("custom_layout.unpin") : t("custom_layout.pin")}
             aria-pressed={pinned}
             tabIndex={focusable ? undefined : -1}
@@ -528,10 +551,14 @@ export const CustomLayoutView: FC<Props> = ({
           <button
             type="button"
             aria-label={
-              isMaximised ? t("custom_layout.restore") : t("custom_layout.maximise")
+              isMaximised
+                ? t("custom_layout.restore")
+                : t("custom_layout.maximise")
             }
             title={
-              isMaximised ? t("custom_layout.restore") : t("custom_layout.maximise")
+              isMaximised
+                ? t("custom_layout.restore")
+                : t("custom_layout.maximise")
             }
             tabIndex={focusable ? undefined : -1}
             onClick={() => vm.setMaximised(isMaximised ? null : tile.key)}

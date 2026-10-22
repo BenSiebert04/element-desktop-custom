@@ -125,24 +125,20 @@ export function createCustomLayoutViewModel(
   const streams$ = scope.behavior<CustomStream[]>(
     combineLatest([userMedia$, screenShares$]).pipe(
       map(([userMedia, screenShares]) => [
-        ...userMedia.map(
-          (media): CustomStream => ({
-            key: media.id,
-            kind: "camera",
-            userId: media.userId,
-            local: media.local,
-            media,
-          }),
-        ),
-        ...screenShares.map(
-          (media): CustomStream => ({
-            key: media.id,
-            kind: "screen",
-            userId: media.userId,
-            local: media.local,
-            media,
-          }),
-        ),
+        ...userMedia.map((media): CustomStream => ({
+          key: media.id,
+          kind: "camera",
+          userId: media.userId,
+          local: media.local,
+          media,
+        })),
+        ...screenShares.map((media): CustomStream => ({
+          key: media.id,
+          kind: "screen",
+          userId: media.userId,
+          local: media.local,
+          media,
+        })),
       ]),
       distinctUntilChanged(streamsEqual),
     ),
@@ -202,9 +198,7 @@ export function createCustomLayoutViewModel(
 
   const vm: CustomLayoutViewModel = {
     config$,
-    active$: scope.behavior(
-      config$.pipe(map((c) => c.preset !== "default")),
-    ),
+    active$: scope.behavior(config$.pipe(map((c) => c.preset !== "default"))),
     streams$,
     maximised$,
     panelOpen$,
@@ -328,4 +322,22 @@ export function createCustomLayoutViewModel(
     },
   };
   return vm;
+}
+
+/**
+ * Element Call's own grid/spotlight switch only applies to its standard view.
+ * Returns the switch to show in the footer: none while the custom layout is
+ * active.
+ */
+export function layoutSwitchUnlessCustom$<T>(
+  scope: ObservableScope,
+  layoutSwitchVm$: Behavior<T | null>,
+  customLayoutActive$: Behavior<boolean>,
+): Behavior<T | null> {
+  return scope.behavior(
+    combineLatest(
+      [layoutSwitchVm$, customLayoutActive$],
+      (layoutSwitchVm, customActive) => (customActive ? null : layoutSwitchVm),
+    ),
+  );
 }

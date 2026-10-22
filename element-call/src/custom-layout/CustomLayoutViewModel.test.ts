@@ -15,6 +15,7 @@ import { type ScreenShareViewModel } from "../state/media/ScreenShareViewModel";
 import {
   createCustomLayoutViewModel,
   type CustomLayoutViewModel,
+  layoutSwitchUnlessCustom$,
 } from "./CustomLayoutViewModel";
 import { type KeyValueStore, LayoutStorage } from "./layoutStorage";
 import { computeLayout } from "./computePlacements";
@@ -126,7 +127,9 @@ describe("CustomLayoutViewModel", () => {
       [userMedia("bob").id, userMedia("me").id].sort(),
     );
     // The participant is still part of the call, just not shown
-    expect(vm.streams$.value.map((s) => s.key)).toContain(userMedia("alice").id);
+    expect(vm.streams$.value.map((s) => s.key)).toContain(
+      userMedia("alice").id,
+    );
     vm.showAll();
     expect(visibleKeys(vm)).toHaveLength(4);
   });
@@ -150,7 +153,11 @@ describe("CustomLayoutViewModel", () => {
     expect(vm.maximised$.value).toBeNull();
     expect(visibleKeys(vm)).toEqual([userMedia("me").id]);
     // Carol joins and is shown right away
-    userMedia$.next([userMedia("me", true), userMedia("bob"), userMedia("carol")]);
+    userMedia$.next([
+      userMedia("me", true),
+      userMedia("bob"),
+      userMedia("carol"),
+    ]);
     expect(visibleKeys(vm)).toEqual(
       [userMedia("carol").id, userMedia("me").id].sort(),
     );
@@ -252,7 +259,9 @@ describe("persistence", () => {
     vm.setRatio("split", 0.7);
     vm.setHideCameras(true);
     vm.saveNamed("  Gaming + Code  ");
-    expect(vm.savedLayouts$.value.map((s) => s.name)).toEqual(["Gaming + Code"]);
+    expect(vm.savedLayouts$.value.map((s) => s.name)).toEqual([
+      "Gaming + Code",
+    ]);
 
     vm.resetToStandard();
     vm.loadNamed("Gaming + Code");
@@ -318,4 +327,19 @@ describe("persistence", () => {
         .rects.a,
     ).toEqual({ x: 0.5, y: 0, w: 0.5, h: 1, z: 4 });
   });
+});
+
+test("Element Call's layout switch is hidden while the custom layout is active", () => {
+  const { vm } = setup(new LayoutStorage(new MemoryStore()));
+  const layoutSwitch = { name: "switch" };
+  const switch$ = layoutSwitchUnlessCustom$(
+    testScope(),
+    new BehaviorSubject<typeof layoutSwitch | null>(layoutSwitch),
+    vm.active$,
+  );
+  expect(switch$.value).toBeNull();
+  vm.resetToStandard();
+  expect(switch$.value).toBe(layoutSwitch);
+  vm.setPreset("grid");
+  expect(switch$.value).toBeNull();
 });

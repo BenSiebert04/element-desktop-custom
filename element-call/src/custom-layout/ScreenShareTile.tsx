@@ -96,12 +96,8 @@ export const ScreenShareTile: FC<Props> = ({
   const focusUrl = useBehavior(vm.focusUrl$);
   const displayName = useBehavior(vm.displayName$);
   const mxcAvatarUrl = useBehavior(vm.mxcAvatarUrl$);
-  const videoEnabled = useBehavior(
-    vm.local ? alwaysEnabled : vm.videoEnabled$,
-  );
-  const hasAudio = useBehavior(
-    vm.local ? alwaysDisabled : vm.audioEnabled$,
-  );
+  const videoEnabled = useBehavior(vm.local ? alwaysEnabled : vm.videoEnabled$);
+  const hasAudio = useBehavior(vm.local ? alwaysDisabled : vm.audioEnabled$);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const menu = (

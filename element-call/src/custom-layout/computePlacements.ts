@@ -396,11 +396,7 @@ export function completeFreeRects(
     }
     const w = s.kind === "screen" ? 0.45 : 0.22;
     const pxW = w * size.width;
-    const h = clamp(
-      pxW / DEFAULT_ASPECT / Math.max(1, size.height),
-      0.05,
-      0.9,
-    );
+    const h = clamp(pxW / DEFAULT_ASPECT / Math.max(1, size.height), 0.05, 0.9);
     const placed = visible
       .map((v) => result[v.key])
       .filter((r): r is FreeRect => r !== undefined);

@@ -52,50 +52,50 @@ type Box = [number, number, number, number];
 const PresetPreview: FC<{ id: PresetId }> = ({ id }) => {
   const boxes = (
     {
-    default: [
-      [2, 2, 26, 20],
-      [30, 2, 16, 9],
-      [30, 13, 16, 9],
-    ],
-    auto: [
-      [2, 2, 21, 14],
-      [25, 2, 21, 14],
-      [2, 18, 10, 6],
-      [14, 18, 10, 6],
-      [26, 18, 10, 6],
-    ],
-    grid: [
-      [2, 2, 14, 10],
-      [17, 2, 14, 10],
-      [32, 2, 14, 10],
-      [2, 13, 14, 10],
-      [17, 13, 14, 10],
-      [32, 13, 14, 10],
-    ],
-    "two-streams": [
-      [2, 2, 21, 15],
-      [25, 2, 21, 15],
-      [9, 19, 9, 5],
-      [20, 19, 9, 5],
-      [31, 19, 9, 5],
-    ],
-    "four-streams": [
-      [2, 2, 21, 10],
-      [25, 2, 21, 10],
-      [2, 14, 21, 10],
-      [25, 14, 21, 10],
-    ],
-    "main-sidebar": [
-      [2, 2, 33, 22],
-      [37, 2, 9, 6],
-      [37, 10, 9, 6],
-      [37, 18, 9, 6],
-    ],
-    free: [
-      [3, 3, 24, 14],
-      [20, 10, 22, 13],
-      [36, 3, 9, 6],
-    ],
+      default: [
+        [2, 2, 26, 20],
+        [30, 2, 16, 9],
+        [30, 13, 16, 9],
+      ],
+      auto: [
+        [2, 2, 21, 14],
+        [25, 2, 21, 14],
+        [2, 18, 10, 6],
+        [14, 18, 10, 6],
+        [26, 18, 10, 6],
+      ],
+      grid: [
+        [2, 2, 14, 10],
+        [17, 2, 14, 10],
+        [32, 2, 14, 10],
+        [2, 13, 14, 10],
+        [17, 13, 14, 10],
+        [32, 13, 14, 10],
+      ],
+      "two-streams": [
+        [2, 2, 21, 15],
+        [25, 2, 21, 15],
+        [9, 19, 9, 5],
+        [20, 19, 9, 5],
+        [31, 19, 9, 5],
+      ],
+      "four-streams": [
+        [2, 2, 21, 10],
+        [25, 2, 21, 10],
+        [2, 14, 21, 10],
+        [25, 14, 21, 10],
+      ],
+      "main-sidebar": [
+        [2, 2, 33, 22],
+        [37, 2, 9, 6],
+        [37, 10, 9, 6],
+        [37, 18, 9, 6],
+      ],
+      free: [
+        [3, 3, 24, 14],
+        [20, 10, 22, 13],
+        [36, 3, 9, 6],
+      ],
     } satisfies Record<PresetId, Box[]>
   )[id];
   return (
@@ -115,7 +115,8 @@ const StreamRow: FC<{
 }> = ({ vm, stream, visible, pinned }) => {
   const { t } = useTranslation();
   const displayName = useBehavior(stream.media.displayName$);
-  const Icon = stream.kind === "screen" ? ShareScreenSolidIcon : VideoCallSolidIcon;
+  const Icon =
+    stream.kind === "screen" ? ShareScreenSolidIcon : VideoCallSolidIcon;
   const kindLabel =
     stream.kind === "screen"
       ? t("custom_layout.screen")
