@@ -1,0 +1,192 @@
+/*
+Copyright 2026 Element Custom contributors.
+
+SPDX-License-Identifier: AGPL-3.0-only
+Please see LICENSE in the repository root for full details.
+*/
+
+.panel {
+  position: absolute;
+  inset-block: var(--cpd-space-2x);
+  inset-inline-end: var(--cpd-space-2x);
+  z-index: var(--call-view-header-footer-layer, 10);
+  box-sizing: border-box;
+  inline-size: min(360px, calc(100% - 2 * var(--cpd-space-2x)));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cpd-space-5x);
+  padding: var(--cpd-space-4x);
+  border: var(--cpd-border-width-1) solid var(--cpd-color-border-interactive-secondary);
+  border-radius: var(--cpd-space-3x);
+  background: var(--cpd-color-bg-canvas-default);
+  color: var(--cpd-color-text-primary);
+  box-shadow: 0 4px 24px rgb(0 0 0 / 0.25);
+}
+
+.header,
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cpd-space-2x);
+}
+
+.header h2,
+.heading,
+.subheading {
+  margin: 0;
+}
+
+.heading {
+  margin-block-end: var(--cpd-space-2x);
+}
+
+.subheading {
+  margin-block: var(--cpd-space-3x) var(--cpd-space-1x);
+  color: var(--cpd-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.hint {
+  margin: 0;
+  color: var(--cpd-color-text-secondary);
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--cpd-space-2x);
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cpd-space-1x);
+  padding: var(--cpd-space-2x);
+  border: var(--cpd-border-width-1) solid var(--cpd-color-border-interactive-secondary);
+  border-radius: var(--cpd-space-2x);
+  background: transparent;
+  color: var(--cpd-color-text-primary);
+  text-align: center;
+  cursor: pointer;
+}
+
+.preset:hover {
+  background: var(--cpd-color-bg-subtle-secondary);
+}
+
+.preset[aria-checked="true"] {
+  border-color: var(--cpd-color-border-accent);
+  outline: var(--cpd-border-width-1) solid var(--cpd-color-border-accent);
+  background: var(--cpd-color-bg-subtle-secondary);
+}
+
+.preview {
+  inline-size: 64px;
+  block-size: 35px;
+}
+
+.preview rect {
+  fill: var(--cpd-color-icon-tertiary);
+}
+
+.preset[aria-checked="true"] .preview rect {
+  fill: var(--cpd-color-icon-accent-primary);
+}
+
+.streams,
+.saved {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cpd-space-1x);
+}
+
+.stream,
+.saved li {
+  display: flex;
+  align-items: center;
+  gap: var(--cpd-space-2x);
+  padding: var(--cpd-space-1x) var(--cpd-space-2x);
+  border-radius: var(--cpd-space-2x);
+  background: var(--cpd-color-bg-subtle-secondary);
+}
+
+.stream.hidden {
+  opacity: 0.6;
+}
+
+.kindIcon {
+  flex-shrink: 0;
+  color: var(--cpd-color-icon-secondary);
+}
+
+.streamName {
+  flex: 1;
+  min-inline-size: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.streamName > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kindLabel {
+  color: var(--cpd-color-text-secondary);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--cpd-space-1x);
+  cursor: pointer;
+}
+
+.saveForm {
+  display: flex;
+  gap: var(--cpd-space-2x);
+  margin-block-end: var(--cpd-space-2x);
+}
+
+.input {
+  flex: 1;
+  min-inline-size: 0;
+  padding: var(--cpd-space-2x) var(--cpd-space-3x);
+  border: var(--cpd-border-width-1) solid var(--cpd-color-border-interactive-primary);
+  border-radius: var(--cpd-space-2x);
+  background: var(--cpd-color-bg-canvas-default);
+  color: var(--cpd-color-text-primary);
+  font: var(--cpd-font-body-md-regular);
+}
+
+.actions,
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cpd-space-2x);
+  margin-block-start: var(--cpd-space-3x);
+}
+
+.footer {
+  flex-direction: column;
+  align-items: stretch;
+  margin-block-start: auto;
+}
+
+.visuallyHidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

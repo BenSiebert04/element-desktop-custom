@@ -20,7 +20,7 @@ import {
 import useMeasure from "react-use-measure";
 import { type MatrixRTCSession } from "matrix-js-sdk/lib/matrixrtc";
 import classNames from "classnames";
-import { map } from "rxjs";
+import { combineLatest, map } from "rxjs";
 import { useObservable } from "observable-hooks";
 import { logger as rootLogger } from "matrix-js-sdk/lib/logger";
 import { useTranslation } from "react-i18next";
@@ -91,6 +91,14 @@ import { type DeveloperSettingsSnapshot } from "../settings/DeveloperSettingsTab
 import { type ViewModel } from "../state/ViewModel.ts";
 import { RingingStatus } from "../tile/RingingStatus.tsx";
 import { RingingAudioRenderer } from "./RingingAudioRenderer.tsx";
+import {
+  createCustomLayoutViewModel,
+  type CustomLayoutViewModel,
+} from "../custom-layout/CustomLayoutViewModel.ts";
+import { defaultLayoutStorage } from "../custom-layout/layoutStorage.ts";
+import { CustomLayoutView } from "../custom-layout/CustomLayoutView.tsx";
+import { CustomLayoutButton } from "../custom-layout/CustomLayoutButton.tsx";
+import { LayoutPanel } from "../custom-layout/LayoutPanel.tsx";
 
 declare module "react" {
   interface CSSProperties {
@@ -101,7 +109,12 @@ declare module "react" {
 
 export interface ActiveCallProps extends Omit<
   InCallViewProps,
-  "vm" | "livekitRoom" | "connState" | "footerVm" | "developerSettingsVm"
+  | "vm"
+  | "livekitRoom"
+  | "connState"
+  | "footerVm"
+  | "developerSettingsVm"
+  | "customLayoutVm"
 > {
   e2eeSystem: EncryptionSystem;
   // TODO refactor those reasons into an enum
@@ -117,6 +130,8 @@ export const ActiveCall: FC<ActiveCallProps> = (props) => {
   );
   const [developerSettingsVm, setDeveloperSettingsVm] =
     useState<ViewModel<DeveloperSettingsSnapshot> | null>(null);
+  const [customLayoutVm, setCustomLayoutVm] =
+    useState<CustomLayoutViewModel | null>(null);
 
   const urlParams = useUrlParams();
   const hostBridge = useHostBridge();
@@ -180,9 +195,28 @@ export const ActiveCall: FC<ActiveCallProps> = (props) => {
     if (vm === null) return;
 
     const scope = new ObservableScope();
+    // [element-custom] The custom call layout: a purely local view preference
+    const customLayoutVm = createCustomLayoutViewModel(scope, {
+      roomId: props.matrixRoom.roomId,
+      storage: defaultLayoutStorage(),
+      userMedia$: vm.customLayoutUserMedia$,
+      screenShares$: vm.customLayoutScreenShares$,
+    });
+    setCustomLayoutVm(customLayoutVm);
     const footerVm = createCallFooterViewModel(
       scope,
-      vm,
+      {
+        ...vm,
+        // Element Call's own grid/spotlight switch only applies to its
+        // standard view, so hide it while the custom layout is active
+        layoutSwitchVm$: scope.behavior(
+          combineLatest(
+            [vm.layoutSwitchVm$, customLayoutVm.active$],
+            (layoutSwitchVm, customActive) =>
+              customActive ? null : layoutSwitchVm,
+          ),
+        ),
+      },
       props.muteStates,
       mediaDevices,
       `${props.client.getUserId()}:${props.client.getDeviceId()}`,
@@ -210,6 +244,7 @@ export const ActiveCall: FC<ActiveCallProps> = (props) => {
   if (vm === null) return null;
   if (footerVm === null) return null;
   if (developerSettingsVm === null) return null;
+  if (customLayoutVm === null) return null;
 
   return (
     <ReactionsSenderProvider vm={vm} rtcSession={props.rtcSession}>
@@ -218,6 +253,7 @@ export const ActiveCall: FC<ActiveCallProps> = (props) => {
         vm={vm}
         footerVm={footerVm}
         developerSettingsVm={developerSettingsVm}
+        customLayoutVm={customLayoutVm}
       />
     </ReactionsSenderProvider>
   );
@@ -228,6 +264,8 @@ export interface InCallViewProps {
   vm: CallViewModel;
   footerVm: ViewModel<FooterSnapshot>;
   developerSettingsVm: ViewModel<DeveloperSettingsSnapshot>;
+  /** [element-custom] The custom call layout. */
+  customLayoutVm: CustomLayoutViewModel;
   matrixInfo: MatrixInfo;
   rtcSession: MatrixRTCSession;
   matrixRoom: MatrixRoom;
@@ -240,6 +278,7 @@ export const InCallView: FC<InCallViewProps> = ({
   vm,
   footerVm,
   developerSettingsVm,
+  customLayoutVm,
   matrixInfo,
   matrixRoom,
   muteStates,
@@ -311,6 +350,8 @@ export const InCallView: FC<InCallViewProps> = ({
   const setSettingsOpen = useBehavior(vm.setSettingsOpen$);
   const earpieceMode = useBehavior(vm.earpieceMode$);
   const audioOutputSwitcher = useBehavior(vm.audioOutputSwitcher$);
+  const customLayoutActive = useBehavior(customLayoutVm.active$);
+  const customLayoutPanelOpen = useBehavior(customLayoutVm.panelOpen$);
 
   const fatalCallError = useBehavior(vm.fatalError$);
   // Stop the rendering and throw for the error boundary
@@ -571,6 +612,29 @@ export const InCallView: FC<InCallViewProps> = ({
       );
     }
 
+    if (customLayoutActive) {
+      // [element-custom] Our own layout replaces Element Call's grid
+      return (
+        <CustomLayoutView
+          vm={customLayoutVm}
+          className={styles.customLayout}
+          style={{
+            insetBlockStart: edgeToEdge
+              ? 0
+              : topWithinRoot + headerBounds.height,
+            height: edgeToEdge ? bounds.height : gridBounds.height,
+          }}
+          width={gridBounds.width}
+          height={edgeToEdge ? bounds.height : gridBounds.height}
+          showSpeakingIndicators
+          showNameTags={showNameTags}
+          focusable={!contentObscured}
+          onOpenProfile={openProfile}
+          aria-hidden={contentObscured}
+        />
+      );
+    }
+
     const layers = layouts[layout.type] as CallLayoutOutputs<Layout>;
     const fixedGrid = (
       <Grid
@@ -648,7 +712,11 @@ export const InCallView: FC<InCallViewProps> = ({
 
   // Only hide the settings button if we have an AppBar header and we are showing the header
   const footer = footerVm !== null && (
-    <CallFooter className={styles.footer} ref={footerRef} vm={footerVm} />
+    <CallFooter className={styles.footer} ref={footerRef} vm={footerVm}>
+      {layout.type !== "pip" && showModals && (
+        <CustomLayoutButton vm={customLayoutVm} />
+      )}
+    </CallFooter>
   );
   const allConnections = useBehavior(vm.allConnections$);
 
@@ -687,6 +755,15 @@ export const InCallView: FC<InCallViewProps> = ({
       {earpieceOverlay}
       <ReactionsOverlay vm={vm} />
       {footer}
+      {customLayoutPanelOpen && showModals && layout.type !== "pip" && (
+        <LayoutPanel
+          vm={customLayoutVm}
+          canvasSize={{
+            width: gridBounds.width - 16,
+            height: gridBounds.height - 16,
+          }}
+        />
+      )}
       {showModals && (
         <>
           <RageshakeRequestModal {...rageshakeRequestModalProps} />

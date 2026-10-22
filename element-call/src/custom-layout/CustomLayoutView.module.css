@@ -1,0 +1,283 @@
+/*
+Copyright 2026 Element Custom contributors.
+
+SPDX-License-Identifier: AGPL-3.0-only
+Please see LICENSE in the repository root for full details.
+*/
+
+.canvas {
+  position: absolute;
+  inset-inline: 0;
+  box-sizing: border-box;
+  inline-size: 100%;
+}
+
+.inner {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.frame {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  box-sizing: border-box;
+  touch-action: none;
+  container-type: size;
+  transition:
+    transform 0.18s ease,
+    width 0.18s ease,
+    height 0.18s ease;
+}
+
+@media (prefers-reduced-motion) {
+  .frame {
+    transition: none;
+  }
+}
+
+.frame.dragging {
+  transition: none;
+  opacity: 0.85;
+  cursor: grabbing;
+}
+
+.frame.dropTarget > .tile {
+  outline: var(--cpd-border-width-2) solid var(--cpd-color-border-accent);
+}
+
+/* The media tile always fills its frame */
+.frame > .tile {
+  position: absolute;
+  inset: 0;
+  inline-size: auto !important;
+  block-size: auto !important;
+}
+
+.toolbar {
+  position: absolute;
+  inset-block-start: var(--cpd-space-2x);
+  inset-inline-start: var(--cpd-space-2x);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--cpd-space-1x);
+  padding: var(--cpd-space-1x);
+  border-radius: var(--cpd-space-2x);
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.frame:hover > .toolbar,
+.frame:focus-within > .toolbar,
+.frame.dragging > .toolbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.toolbar button {
+  display: grid;
+  place-items: center;
+  inline-size: 26px;
+  block-size: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--cpd-space-1x);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.toolbar button:hover,
+.toolbar button:focus-visible {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.toolbar button[aria-pressed="true"] {
+  background: rgb(255 255 255 / 0.3);
+}
+
+.grip {
+  display: grid;
+  place-items: center;
+  inline-size: 20px;
+  block-size: 26px;
+  cursor: grab;
+}
+
+/* Keep small tiles uncluttered */
+@container (max-width: 200px) {
+  .grip,
+  .toolbar button:nth-of-type(3) {
+    display: none;
+  }
+}
+
+@container (max-width: 130px) {
+  .toolbar {
+    display: none;
+  }
+}
+
+.screenIcon {
+  color: var(--cpd-color-icon-accent-primary);
+  flex-shrink: 0;
+}
+
+/* Resize handles of free tiles */
+.handle {
+  position: absolute;
+  z-index: 3;
+}
+
+.handle[data-edge="n"],
+.handle[data-edge="s"] {
+  inset-inline: 12px;
+  block-size: 10px;
+  cursor: ns-resize;
+}
+
+.handle[data-edge="e"],
+.handle[data-edge="w"] {
+  inset-block: 12px;
+  inline-size: 10px;
+  cursor: ew-resize;
+}
+
+.handle[data-edge="n"] {
+  inset-block-start: -4px;
+}
+.handle[data-edge="s"] {
+  inset-block-end: -4px;
+}
+.handle[data-edge="e"] {
+  inset-inline-end: -4px;
+}
+.handle[data-edge="w"] {
+  inset-inline-start: -4px;
+}
+
+.handle[data-edge="ne"],
+.handle[data-edge="nw"],
+.handle[data-edge="se"],
+.handle[data-edge="sw"] {
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+.handle[data-edge="ne"] {
+  inset-block-start: -4px;
+  inset-inline-end: -4px;
+  cursor: nesw-resize;
+}
+.handle[data-edge="sw"] {
+  inset-block-end: -4px;
+  inset-inline-start: -4px;
+  cursor: nesw-resize;
+}
+.handle[data-edge="nw"] {
+  inset-block-start: -4px;
+  inset-inline-start: -4px;
+  cursor: nwse-resize;
+}
+.handle[data-edge="se"] {
+  inset-block-end: -4px;
+  inset-inline-end: -4px;
+  cursor: nwse-resize;
+  /* A visible grip in the corner */
+  background: linear-gradient(
+    135deg,
+    transparent 55%,
+    var(--cpd-color-icon-secondary) 55%,
+    var(--cpd-color-icon-secondary) 65%,
+    transparent 65%,
+    transparent 75%,
+    var(--cpd-color-icon-secondary) 75%,
+    var(--cpd-color-icon-secondary) 85%,
+    transparent 85%
+  );
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.frame:hover > .handle[data-edge="se"] {
+  opacity: 1;
+}
+
+/* Draggable boundaries between areas of a preset */
+.divider {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+}
+
+.divider[data-orientation="vertical"] {
+  cursor: col-resize;
+}
+
+.divider[data-orientation="horizontal"] {
+  cursor: row-resize;
+}
+
+.divider::after {
+  content: "";
+  position: absolute;
+  border-radius: 2px;
+  background: var(--cpd-color-icon-tertiary);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.divider[data-orientation="vertical"]::after {
+  inset-block: 30%;
+  inset-inline-start: calc(50% - 2px);
+  inline-size: 4px;
+}
+
+.divider[data-orientation="horizontal"]::after {
+  inset-inline: 30%;
+  inset-block-start: calc(50% - 2px);
+  block-size: 4px;
+}
+
+.divider:hover::after,
+.dividerActive::after {
+  opacity: 1;
+}
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cpd-space-3x);
+  color: var(--cpd-color-text-secondary);
+  font: var(--cpd-font-body-md-regular);
+}
+
+.hiddenChip {
+  position: absolute;
+  inset-block-end: var(--cpd-space-4x);
+  inset-inline-start: var(--cpd-space-4x);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: var(--cpd-space-1x);
+  padding: var(--cpd-space-1x) var(--cpd-space-3x);
+  border: var(--cpd-border-width-1) solid var(--cpd-color-border-interactive-secondary);
+  border-radius: 999px;
+  background: var(--cpd-color-bg-canvas-default);
+  color: var(--cpd-color-text-primary);
+  font: var(--cpd-font-body-sm-medium);
+  cursor: pointer;
+}
+
+.hiddenChip:hover {
+  background: var(--cpd-color-bg-subtle-secondary);
+}

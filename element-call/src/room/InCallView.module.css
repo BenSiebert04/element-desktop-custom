@@ -114,3 +114,8 @@ spotlight tile is maximised and displaying video, apply a gradient background. *
   position: relative;
   flex-grow: 1;
 }
+
+/* [element-custom] The custom call layout canvas */
+.customLayout {
+  z-index: 0;
+}

@@ -63,6 +63,10 @@ interface TileProps {
   mxcAvatarUrl: string | undefined;
   showNameTags: boolean;
   focusable: boolean;
+  /**
+   * [element-custom] Additional entries for the tile's menus.
+   */
+  extraMenuItems?: ReactNode;
 }
 
 interface RingingMediaTileProps extends TileProps {
@@ -74,6 +78,7 @@ const RingingMediaTile: FC<RingingMediaTileProps> = ({
   vm,
   showStatus,
   className,
+  extraMenuItems: _extraMenuItems,
   ...props
 }) => {
   return (
@@ -236,7 +241,7 @@ const UserMediaTileInner: FC<UserMediaTileProps & { menu: ReactNode }> = ({
  */
 const UserMediaTile: FC<
   UserMediaTileProps & { menuStart?: ReactNode; menuEnd?: ReactNode }
-> = ({ menuStart, menuEnd, ...props }) => {
+> = ({ menuStart, menuEnd, extraMenuItems, ...props }) => {
   const menu = useMemo(
     () => (
       <>
@@ -246,9 +251,10 @@ const UserMediaTile: FC<
        Placeholder for future menu items that should be placed here.
        */}
         {menuEnd}
+        {extraMenuItems}
       </>
     ),
-    [menuStart, menuEnd],
+    [menuStart, menuEnd, extraMenuItems],
   );
 
   // ContextMenu is expensive to render, so we avoid subscribing to any
@@ -424,6 +430,10 @@ interface GridTileProps {
   showRingingStatus: boolean;
   showOutline: boolean;
   focusable: boolean;
+  /**
+   * [element-custom] Additional entries for the tile's menus.
+   */
+  extraMenuItems?: ReactNode;
 }
 
 export const GridTile: FC<GridTileProps> = ({

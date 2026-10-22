@@ -434,6 +434,16 @@ export interface CallViewModel {
   spotlightExpanded$: Behavior<boolean>;
   toggleSpotlightExpanded$: Behavior<(() => void) | null>;
   layoutSwitchVm$: Behavior<LayoutSwitchViewModel | null>;
+  /**
+   * [element-custom] All camera media in the call, independent of the layout.
+   * Used by the custom call layout.
+   */
+  customLayoutUserMedia$: Behavior<UserMediaViewModel[]>;
+  /**
+   * [element-custom] All screen shares in the call, independent of the
+   * layout. Used by the custom call layout.
+   */
+  customLayoutScreenShares$: Behavior<ScreenShareViewModel[]>;
 
   // header/footer visibility
   showHeader$: Behavior<boolean>;
@@ -1891,6 +1901,8 @@ export function createCallViewModel$(
       showLayoutSwitch$.pipe(map((show) => (show ? layoutSwitchVm : null))),
     ),
     layout$: layout$,
+    customLayoutUserMedia$: userMedia$,
+    customLayoutScreenShares$: screenShares$,
     localMatrixLivekitMember$,
     remoteMatrixLivekitMembers$: scope.behavior(
       remoteMatrixLivekitMembers$.pipe(

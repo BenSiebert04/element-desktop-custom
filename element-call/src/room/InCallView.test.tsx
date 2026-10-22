@@ -52,6 +52,19 @@ import { type MatrixInfo } from "./VideoPreview";
 import { ProcessorProvider } from "../livekit/TrackProcessorContext";
 import { initializeWidget } from "../widget";
 import { RootElementProvider } from "../RootElementContext";
+import { testScope } from "../utils/test";
+import {
+  createCustomLayoutViewModel,
+  type CustomLayoutViewModel,
+} from "../custom-layout/CustomLayoutViewModel";
+import {
+  type KeyValueStore,
+  LayoutStorage,
+} from "../custom-layout/layoutStorage";
+import {
+  type CustomLayoutConfig,
+  standardViewConfig,
+} from "../custom-layout/layoutConfig";
 
 initializeWidget();
 vi.hoisted(
@@ -124,10 +137,25 @@ interface CreateInCallViewArgs {
   callViewModelOptions?: Partial<CallViewModelOptions>;
   /** If true, wraps the rendered tree in an AppBar provider */
   withAppBar?: boolean;
+  /**
+   * [element-custom] The stored custom layout of the room. Defaults to
+   * Element Call's standard view.
+   */
+  customLayout?: Partial<CustomLayoutConfig>;
+}
+
+export function memoryStore(): KeyValueStore {
+  const data = new Map<string, string>();
+  return {
+    getItem: (k) => data.get(k) ?? null,
+    setItem: (k, v) => void data.set(k, v),
+    removeItem: (k) => void data.delete(k),
+  };
 }
 function createInCallView(args: CreateInCallViewArgs = {}): RenderResult & {
   rtcSession: MockRTCSession;
   vm: CallViewModel;
+  customLayoutVm: CustomLayoutViewModel;
 } {
   const mediaDevices = args.mediaDevices ?? mockMediaDevices({});
   const muteState = mockMuteStates();
@@ -151,6 +179,18 @@ function createInCallView(args: CreateInCallViewArgs = {}): RenderResult & {
   const room = rtcSession.room;
   const client = room.client;
 
+  const storage = new LayoutStorage(memoryStore());
+  storage.saveRoom(room.roomId, {
+    ...standardViewConfig(),
+    ...args.customLayout,
+  });
+  const customLayoutVm = createCustomLayoutViewModel(testScope(), {
+    roomId: room.roomId,
+    storage,
+    userMedia$: vm.customLayoutUserMedia$,
+    screenShares$: vm.customLayoutScreenShares$,
+  });
+
   const inCallView = (
     <InCallView
       client={client}
@@ -159,6 +199,7 @@ function createInCallView(args: CreateInCallViewArgs = {}): RenderResult & {
       vm={vm}
       footerVm={footerVm}
       developerSettingsVm={developerSettingsVm}
+      customLayoutVm={customLayoutVm}
       matrixInfo={matrixInfo}
       matrixRoom={room}
       onShareClick={null}
@@ -185,6 +226,7 @@ function createInCallView(args: CreateInCallViewArgs = {}): RenderResult & {
     ...renderResult,
     rtcSession,
     vm,
+    customLayoutVm,
   };
 }
 
