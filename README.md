@@ -87,6 +87,11 @@ einer laufenden Freigabe umschaltbar:
 - **Highspeed:** bis zu 60 fps haben Vorrang, Auflösung und Qualität sinken
   bei Bedarf. Für Spiele und Videos.
 
+Im selben Menü: **Ton mitübertragen** (standardmäßig an). In der Desktop-App
+unter Windows wird dabei der Ton des ganzen Computers übertragen; eine
+einzelne Anwendung lässt sich technisch nicht auswählen (Electron bietet nur
+den Systemton an). Gilt ab der nächsten Freigabe.
+
 Layout-Einstellungen werden pro Raum lokal gespeichert, optional mit einem
 globalen Standard; Lautstärken pro Person.
 

@@ -84,7 +84,9 @@ import { areLivekitTransportsEqual } from "../remoteMembers/MatrixLivekitMembers
 import {
   applyScreenShareMode,
   currentScreenShareMode,
+  screenShareAudio,
   screenShareMode,
+  withScreenShareAudio,
   withScreenShareMode,
 } from "../../../custom-layout/screenShareMode.ts";
 import { or$ } from "../../../utils/observable.ts";
@@ -882,7 +884,7 @@ export const createLocalMembership$ = ({
 
       // [element-custom] Readability / speed mode, unless the developer
       // settings for screen sharing are in use
-      const [captureOptions, modePublishOptions] =
+      const [modeCaptureOptions, modePublishOptions] =
         advancedScreenShare.getValue()
           ? [screenshareSettings, publishOptions]
           : withScreenShareMode(
@@ -890,6 +892,11 @@ export const createLocalMembership$ = ({
               screenshareSettings,
               publishOptions,
             );
+      // [element-custom] Share the sound too, unless switched off
+      const captureOptions = withScreenShareAudio(
+        modeCaptureOptions,
+        screenShareAudio.getValue(),
+      );
 
       const targetScreenshareState = !sharingScreen$.value;
       logger.info(

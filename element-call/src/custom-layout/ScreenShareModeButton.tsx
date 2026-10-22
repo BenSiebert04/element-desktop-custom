@@ -8,18 +8,29 @@ Please see LICENSE in the repository root for full details.
 import { type FC, useState } from "react";
 import { useTranslation } from "react-i18next";
 import classNames from "classnames";
-import { Button, Menu, MenuItem } from "@vector-im/compound-web";
+import {
+  Button,
+  Menu,
+  MenuItem,
+  Separator,
+  ToggleMenuItem,
+} from "@vector-im/compound-web";
 import {
   CheckIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  VolumeOnIcon,
 } from "@vector-im/compound-design-tokens/assets/web/icons";
 import { useObservableEagerState } from "observable-hooks";
 
 import { ShareScreenButton } from "../button";
 import styles from "../components/MediaMuteAndSwitchButton.module.css";
 import modeStyles from "./ScreenShareModeButton.module.css";
-import { SCREEN_SHARE_MODES, screenShareMode } from "./screenShareMode";
+import {
+  SCREEN_SHARE_MODES,
+  screenShareAudio,
+  screenShareMode,
+} from "./screenShareMode";
 
 interface Props {
   size: "md" | "lg";
@@ -43,6 +54,7 @@ export const ScreenShareModeButton: FC<Props> = ({
   const stored = useObservableEagerState(screenShareMode.value$);
   // Unknown stored values count as "standard"
   const mode = SCREEN_SHARE_MODES.includes(stored) ? stored : "standard";
+  const shareAudio = useObservableEagerState(screenShareAudio.value$);
 
   return (
     <div
@@ -106,6 +118,21 @@ export const ScreenShareModeButton: FC<Props> = ({
             </span>
           </MenuItem>
         ))}
+        <Separator />
+        <ToggleMenuItem
+          Icon={VolumeOnIcon}
+          label={t("custom_layout.screen_share_mode.audio")}
+          checked={shareAudio}
+          onSelect={(e) => {
+            // Keep the menu open
+            e.preventDefault();
+            screenShareAudio.setValue(!shareAudio);
+          }}
+          data-testid="screen-share-audio"
+        />
+        <p className={modeStyles.hint}>
+          {t("custom_layout.screen_share_mode.audio_description")}
+        </p>
       </Menu>
     </div>
   );

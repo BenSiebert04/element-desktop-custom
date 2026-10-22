@@ -1,0 +1,101 @@
+diff --git a/apps/desktop/src/electron-main.ts b/apps/desktop/src/electron-main.ts
+index 3ecb63d..1ace271 100644
+--- a/apps/desktop/src/electron-main.ts
++++ b/apps/desktop/src/electron-main.ts
+@@ -40,6 +40,7 @@ import * as updater from "./updater.js";
+ import ProtocolHandler from "./protocol.js";
+ import { _t, AppLocalization } from "./language-helper.js";
+ import { setDisplayMediaCallback } from "./displayMediaCallback.js";
++import { withSystemAudio } from "./systemAudio.js";
+ import { setupMacosTitleBar } from "./macos-titlebar.js";
+ import { setupMediaAuth } from "./media-auth.js";
+ import { handleWindowClose, revealMainWindow } from "./window-close.js";
+@@ -369,7 +370,7 @@ app.on("ready", async () => {
+     rendererRecovery = setupRendererRecovery(global.mainWindow);
+ 
+     session.defaultSession.setDisplayMediaRequestHandler(
+-        (_, callback) => {
++        (request, callback) => {
+             if (process.env.XDG_SESSION_TYPE === "wayland") {
+                 // On Wayland, calling getSources() opens the xdg-desktop-portal picker.
+                 // The user can only select a single source there, so Electron will return an array with exactly one entry.
+@@ -388,7 +389,10 @@ app.on("ready", async () => {
+             } else {
+                 global.mainWindow?.webContents.send("openDesktopCapturerSourcePicker");
+             }
+-            setDisplayMediaCallback(callback);
++            // [mosaix] Include the system audio if the call asked for audio
++            setDisplayMediaCallback((streams) =>
++                callback(withSystemAudio(streams, request.audioRequested, process.platform)),
++            );
+         },
+         { useSystemPicker: true },
+     ); // Use Mac OS 15+ native picker
+diff --git a/apps/desktop/src/systemAudio.test.ts b/apps/desktop/src/systemAudio.test.ts
+new file mode 100644
+index 0000000..d55c556
+--- /dev/null
++++ b/apps/desktop/src/systemAudio.test.ts
+@@ -0,0 +1,33 @@
++/*
++Copyright 2026 Mosaix contributors.
++
++SPDX-License-Identifier: AGPL-3.0-only
++Please see LICENSE in the repository root for full details.
++*/
++
++import { describe, expect, it } from "vitest";
++import type { Streams } from "electron";
++
++import { withSystemAudio } from "./systemAudio.js";
++
++const screen = { video: { id: "screen:0:0", name: "Entire screen" } } as Streams;
++
++describe("withSystemAudio", () => {
++    it("shares the system audio on Windows when the call asks for audio", () => {
++        expect(withSystemAudio(screen, true, "win32")).toEqual({ ...screen, audio: "loopback" });
++    });
++
++    it("shares no audio when the call doesn't ask for it", () => {
++        expect(withSystemAudio(screen, false, "win32")).toEqual(screen);
++    });
++
++    it("shares no audio where Electron can't capture it", () => {
++        expect(withSystemAudio(screen, true, "linux")).toEqual(screen);
++        expect(withSystemAudio(screen, true, "darwin")).toEqual(screen);
++    });
++
++    it("adds nothing when the picker was cancelled", () => {
++        const cancelled = { video: { id: "", name: "" } } as Streams;
++        expect(withSystemAudio(cancelled, true, "win32")).toEqual(cancelled);
++    });
++});
+diff --git a/apps/desktop/src/systemAudio.ts b/apps/desktop/src/systemAudio.ts
+new file mode 100644
+index 0000000..f6e1e17
+--- /dev/null
++++ b/apps/desktop/src/systemAudio.ts
+@@ -0,0 +1,23 @@
++/*
++Copyright 2026 Mosaix contributors.
++
++SPDX-License-Identifier: AGPL-3.0-only
++Please see LICENSE in the repository root for full details.
++*/
++
++import type { Streams } from "electron";
++
++/**
++ * [mosaix] Adds the system audio to a chosen screen share source when the web
++ * content asked for audio (Element Call does when "Share audio" is on).
++ *
++ * Electron can only capture the whole system's audio ("loopback"), and only on
++ * Windows; there is no way to capture a single application's audio.
++ */
++export function withSystemAudio(streams: Streams, audioRequested: boolean, platform: NodeJS.Platform): Streams {
++    const video = streams.video;
++    // A cancelled picker returns a dummy source without an id
++    const chosen = video !== undefined && "id" in video && typeof video.id === "string" && video.id !== "";
++    if (!audioRequested || platform !== "win32" || !chosen) return streams;
++    return { ...streams, audio: "loopback" };
++}

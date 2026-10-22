@@ -99,6 +99,8 @@
     "saved_heading": "Saved layouts",
     "screen": "Screen",
     "screen_share_mode": {
+      "audio": "Share audio",
+      "audio_description": "In the desktop app on Windows this is the sound of the whole computer (a single app can't be picked). Applies the next time you share.",
       "readability": "Readability",
       "readability_description": "Full screen resolution comes first; the frame rate drops if needed. Best for text and code.",
       "speed": "High speed",

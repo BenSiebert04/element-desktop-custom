@@ -42,7 +42,11 @@ weiterhin das iframe-Widget, und dieses passen wir an.
   [Element Web](#element-web)). Der Ordner `widgets/element-call/` wird
   danach durch unseren Element-Call-Build ersetzt und eine eigene
   `config.json` hinzugefügt.
-- **Element Desktop** wird unverändert aus dem offiziellen Tag gebaut.
+- **Element Desktop** wird aus dem offiziellen Tag gebaut, mit einer einzigen
+  kleinen Änderung (`element-web/patches-desktop/`, von
+  `scripts/prepare-desktop.mjs` angewendet): Fordert der Anruf beim
+  Bildschirm-Teilen Ton an, gibt Mosaix unter Windows den Systemton mit
+  (Electron `audio: "loopback"`).
   Branding (Name, App-ID, Protokoll, Icon) erfolgt über den vorgesehenen
   Mechanismus „Variant“ (`VARIANT_PATH`) und zusätzliche Dateien. Die
   Windows-Paketierung überschreibt nur die `win`/`nsis`-Einstellungen in einer

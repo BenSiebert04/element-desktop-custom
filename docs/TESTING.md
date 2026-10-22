@@ -12,6 +12,7 @@
 | Upstream Element Desktop | Unit-Tests von `apps/desktop` (v1.12.32) | ja | Regressionstest Desktop-Hauptprozess mit unserem Branding |
 | End-to-End | `e2e/call-layout.e2e.mjs` | nein (lokal, Linux) | echter Anruf über LiveKit mit 3 Browsern und 2 Screenshares |
 | Lautstärke/Ebenen | `volumeStorage.test.ts`, `CustomLayoutView.test.tsx`, `CustomLayoutViewModel.test.ts`, `computePlacements.test.ts` | ja | Speicherung pro Person (0–200 %, defekte Daten), Übernahme nach Tastatur-Eingabe, Begrenzung auf 100 % solange kein Web Audio, Ebenen vor „nach vorn holen“, Transparenz, Menüeinträge, Hinweis „n ausgeblendet“ nur 5 s nach Mausbewegung |
+| Systemton (Desktop) | `apps/desktop/src/systemAudio.test.ts` (Desktop-Patch) | ja | Systemton nur unter Windows, nur wenn der Anruf Ton anfordert, nicht bei abgebrochener Auswahl |
 | Bildschirmfreigabe-Modi | `screenShareMode.test.tsx` | ja | Optionen je Modus, Wechsel während der Freigabe (Hinweis, Auflösung, Degradation, nur oberste Simulcast-Ebene), unbekannte gespeicherte Werte, Auswahlmenü |
 | End-to-End | `e2e/screenshare-modes.e2e.mjs` | nein (lokal, Linux) | echte Freigabe: Highspeed sendet 60 fps mit `maintain-framerate`, Wechsel auf Lesbarkeit ohne neue Bildschirmauswahl ergibt volle Auflösung, `maintain-resolution`, 8 Mbit/s nur auf der großen Ebene |
 | End-to-End | `e2e/call-features.e2e.mjs` | nein (lokal, Linux) | echter Anruf: Rechtsklick in der Standardansicht, Transparenz 40 % und Ebene, Lautstärke 200 % mit gemessener Verstärkung 2,0, nach erneutem Beitritt wieder 200 %, Hinweis verschwindet nach 5 s |
@@ -59,6 +60,10 @@ Bildschirm erscheint, Profil in einem eigenen Ordner).
 - **Lautstärke über 100 %** braucht die Wiedergabe über Web Audio, die dem
   gewählten Ausgabegerät folgen kann (Chromium, also die Desktop-App). Wo das
   nicht geht, ist bei 100 % Schluss; der eingestellte Wert bleibt gespeichert.
+- **Ton beim Bildschirm-Teilen** ist der Ton des ganzen Systems (Windows);
+  einzelne Anwendungen kann Electron nicht aufnehmen. Unter Linux und macOS
+  kommt in der Desktop-App kein Ton mit. Nicht auf echtem Windows getestet:
+  Bitte prüfen, ob die anderen dabei ihre eigene Stimme als Echo hören.
 - **Bildschirmfreigabe-Modi** legen fest, was bei knapper Bandbreite oder
   Rechenleistung zuerst nachgibt. Mehr senden als die Verbindung hergibt
   können sie nicht. Sind in den Entwicklereinstellungen von Element Call

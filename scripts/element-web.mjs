@@ -6,6 +6,9 @@
 //
 //   element-web/overlay/   new files, copied into the checkout as they are
 //   element-web/patches/   changes to upstream files, applied with `git apply`
+//   element-web/patches-desktop/
+//                          changes to Element Desktop (apps/desktop/src), applied
+//                          by scripts/prepare-desktop.mjs
 //
 // Usage:
 //   node scripts/element-web.mjs apply  <element-web checkout>
@@ -23,6 +26,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const overlayDir = path.join(root, "element-web", "overlay");
 const patchDir = path.join(root, "element-web", "patches");
 const PATCH_FILE = "mosaix.patch";
+const desktopPatchDir = path.join(root, "element-web", "patches-desktop");
+const DESKTOP_PATCH_FILE = "mosaix-desktop.patch";
+/** Element Desktop code we change (new files included). */
+const DESKTOP_PATHS = ["apps/desktop/src"];
 /** Our new code lives here in the checkout; it is copied, not patched. */
 const OVERLAY_PATHS = ["apps/web/src/mosaix"];
 /** Never part of the patch (local install workarounds must not leak into the build). */
@@ -61,4 +68,13 @@ if (command === "apply") {
     mkdirSync(patchDir, { recursive: true });
     writeFileSync(path.join(patchDir, PATCH_FILE), diff);
     console.log(`patch ${PATCH_FILE}: ${diff.split("\n").filter((l) => l.startsWith("diff --git")).length} files`);
+
+    // New files in Element Desktop become part of its patch
+    git("add", "--intent-to-add", "--", ...DESKTOP_PATHS);
+    const desktopDiff = git("diff", "--", ...DESKTOP_PATHS);
+    mkdirSync(desktopPatchDir, { recursive: true });
+    writeFileSync(path.join(desktopPatchDir, DESKTOP_PATCH_FILE), desktopDiff);
+    console.log(
+        `patch ${DESKTOP_PATCH_FILE}: ${desktopDiff.split("\n").filter((l) => l.startsWith("diff --git")).length} files`,
+    );
 }
