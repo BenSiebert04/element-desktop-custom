@@ -13,6 +13,8 @@ import {
   type TrackPublishOptions,
   RoomEvent,
   MediaDeviceFailure,
+  type LocalVideoTrack,
+  Track,
 } from "livekit-client";
 import { observeParticipantEvents } from "@livekit/components-core";
 import { type MatrixClient } from "matrix-js-sdk";
@@ -35,6 +37,7 @@ import {
   type Observable,
   of,
   pairwise,
+  skip,
   startWith,
   switchMap,
   tap,
@@ -78,6 +81,12 @@ import {
 import { type HomeserverConnected } from "./HomeserverConnected.ts";
 import { type LocalTransport } from "./LocalTransport.ts";
 import { areLivekitTransportsEqual } from "../remoteMembers/MatrixLivekitMembers.ts";
+import {
+  applyScreenShareMode,
+  currentScreenShareMode,
+  screenShareMode,
+  withScreenShareMode,
+} from "../../../custom-layout/screenShareMode.ts";
 import { or$ } from "../../../utils/observable.ts";
 import { getSFUConfigWithOpenID } from "../../../livekit/openIDSFU.ts";
 
@@ -871,6 +880,17 @@ export const createLocalMembership$ = ({
         }
       }
 
+      // [element-custom] Readability / speed mode, unless the developer
+      // settings for screen sharing are in use
+      const [captureOptions, modePublishOptions] =
+        advancedScreenShare.getValue()
+          ? [screenshareSettings, publishOptions]
+          : withScreenShareMode(
+              currentScreenShareMode(),
+              screenshareSettings,
+              publishOptions,
+            );
+
       const targetScreenshareState = !sharingScreen$.value;
       logger.info(
         `toggleScreenSharing called. Switching ${
@@ -890,8 +910,8 @@ export const createLocalMembership$ = ({
       watchScreenShareToggle(
         participant.setScreenShareEnabled(
           targetScreenshareState,
-          screenshareSettings,
-          publishOptions,
+          captureOptions,
+          modePublishOptions,
         ),
         targetScreenshareState,
         logger,
@@ -899,6 +919,19 @@ export const createLocalMembership$ = ({
       );
     };
   }
+
+  // [element-custom] Switch a running screen share to another mode
+  screenShareMode.value$.pipe(skip(1), scope.bind()).subscribe(() => {
+    if (advancedScreenShare.getValue()) return;
+    const track = participant$.value?.getTrackPublication(
+      Track.Source.ScreenShare,
+    )?.track;
+    if (track)
+      void applyScreenShareMode(
+        track as LocalVideoTrack,
+        currentScreenShareMode(),
+      );
+  });
 
   return {
     startTracks,

@@ -78,6 +78,15 @@ Für ausgeblendete Videos stoppt LiveKit automatisch den Videoempfang. Der
 Hinweis „n ausgeblendet“ erscheint nur, solange die Maus über dem Anruf
 bewegt wird, und verschwindet 5 Sekunden danach.
 
+**Bildschirmfreigabe-Modus** (Pfeil neben dem Freigabe-Button), auch während
+einer laufenden Freigabe umschaltbar:
+
+- **Standard:** wie Element (1080p, bis 15 fps).
+- **Lesbarkeit:** volle Bildschirmauflösung hat Vorrang, die Bildrate (bis
+  30 fps) sinkt bei Bedarf. Für Text, Code, Dokumente.
+- **Highspeed:** bis zu 60 fps haben Vorrang, Auflösung und Qualität sinken
+  bei Bedarf. Für Spiele und Videos.
+
 Layout-Einstellungen werden pro Raum lokal gespeichert, optional mit einem
 globalen Standard; Lautstärken pro Person.
 

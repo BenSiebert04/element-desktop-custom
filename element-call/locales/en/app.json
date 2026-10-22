@@ -98,6 +98,15 @@
     "save_name_label": "Name for this layout",
     "saved_heading": "Saved layouts",
     "screen": "Screen",
+    "screen_share_mode": {
+      "readability": "Readability",
+      "readability_description": "Full screen resolution comes first; the frame rate drops if needed. Best for text and code.",
+      "speed": "High speed",
+      "speed_description": "Up to 60 fps come first; resolution and quality drop if needed. Best for games and videos.",
+      "standard": "Standard",
+      "standard_description": "Element's default: 1080p, up to 15 fps.",
+      "title": "Screen sharing mode"
+    },
     "screen_shares": "Screen shares",
     "send_to_back": "Send to back",
     "set_global": "Use as default for all rooms",
