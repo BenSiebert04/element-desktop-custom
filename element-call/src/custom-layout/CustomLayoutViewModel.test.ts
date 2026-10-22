@@ -19,7 +19,12 @@ import {
 } from "./CustomLayoutViewModel";
 import { type KeyValueStore, LayoutStorage } from "./layoutStorage";
 import { computeLayout } from "./computePlacements";
-import { defaultConfig, sanitizeConfig } from "./layoutConfig";
+import {
+  defaultConfig,
+  LAYER_MAX,
+  OPACITY_MIN,
+  sanitizeConfig,
+} from "./layoutConfig";
 
 class MemoryStore implements KeyValueStore {
   public readonly data = new Map<string, string>();
@@ -202,6 +207,50 @@ describe("CustomLayoutViewModel", () => {
     expect(vm.config$.value.rects[userMedia("bob").id]).toMatchObject({
       x: 0.75,
       y: 0,
+    });
+  });
+
+  test("layers, front/back and transparency", () => {
+    const { vm } = setup(new LayoutStorage(new MemoryStore()));
+    vm.setPreset("free", size);
+    const alice = userMedia("alice").id;
+    const bob = userMedia("bob").id;
+    const z = (key: string): number => vm.config$.value.rects[key].z;
+    const all = (): number[] =>
+      Object.values(vm.config$.value.rects).map((r) => r.z);
+
+    vm.sendToBack(bob);
+    expect(z(bob)).toBe(Math.min(...all()));
+    vm.bringToFront(bob);
+    expect(z(bob)).toBe(Math.max(...all()));
+
+    vm.setLayer(alice, 3);
+    expect(vm.config$.value.layers).toEqual({ [alice]: 3 });
+    // Clamped to the valid range, whole numbers only
+    vm.setLayer(alice, 42.4);
+    expect(vm.config$.value.layers[alice]).toBe(LAYER_MAX);
+    vm.setLayer(alice, -1);
+    expect(vm.config$.value.layers).toEqual({});
+
+    vm.setOpacity(bob, 0.4);
+    expect(vm.config$.value.opacity).toEqual({ [bob]: 0.4 });
+    vm.setOpacity(bob, 0);
+    expect(vm.config$.value.opacity[bob]).toBe(OPACITY_MIN);
+    vm.setOpacity(bob, 1);
+    expect(vm.config$.value.opacity).toEqual({});
+  });
+
+  test("stored layers and transparency are validated", () => {
+    const c = sanitizeConfig({
+      opacity: { a: 0.5, b: -3, c: "x" },
+      layers: { a: 2.6, b: 100, c: null },
+    });
+    expect(c.opacity).toEqual({ a: 0.5, b: OPACITY_MIN });
+    expect(c.layers).toEqual({ a: 3, b: LAYER_MAX });
+    // Older stored layouts have neither
+    expect(sanitizeConfig({ preset: "free" })).toMatchObject({
+      opacity: {},
+      layers: {},
     });
   });
 

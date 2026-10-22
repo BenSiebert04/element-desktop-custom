@@ -35,6 +35,16 @@ interface VolumeControlsInputs {
    * requested volume.
    */
   sink$: Behavior<(volume: number) => void>;
+  /**
+   * [element-custom] The volume to start with (e.g. remembered from an
+   * earlier call). Defaults to 1.
+   */
+  initialVolume?: number;
+  /**
+   * [element-custom] Called with the new volume whenever the user commits a
+   * change (end of a slider drag, mute toggle), e.g. to remember it.
+   */
+  onVolumeCommitted?: (volume: number) => void;
 }
 
 /**
@@ -43,15 +53,25 @@ interface VolumeControlsInputs {
  */
 export function createVolumeControls(
   scope: ObservableScope,
-  { pretendToBeDisconnected$, sink$ }: VolumeControlsInputs,
+  {
+    pretendToBeDisconnected$,
+    sink$,
+    initialVolume = 1,
+    onVolumeCommitted,
+  }: VolumeControlsInputs,
 ): VolumeControls {
+  // [element-custom] Unmuting a person stored as muted goes back to 100 %
+  const initialState = {
+    volume: initialVolume,
+    committedVolume: initialVolume === 0 ? 1 : initialVolume,
+  };
   const toggleMuted$ = new Subject<"toggle mute">();
   const adjustVolume$ = new Subject<number>();
   const commitVolume$ = new Subject<"commit">();
 
   const playbackVolume$ = scope.behavior<number>(
     merge(toggleMuted$, adjustVolume$, commitVolume$).pipe(
-      accumulate({ volume: 1, committedVolume: 1 }, (state, event) => {
+      accumulate(initialState, (state, event) => {
         switch (event) {
           case "toggle mute":
             return {
@@ -88,6 +108,12 @@ export function createVolumeControls(
   ])
     .pipe(scope.bind())
     .subscribe(([sink, volume]) => sink(volume));
+
+  // [element-custom] Report committed changes (after the state has updated)
+  if (onVolumeCommitted)
+    merge(toggleMuted$, commitVolume$)
+      .pipe(scope.bind())
+      .subscribe(() => onVolumeCommitted(playbackVolume$.value));
 
   return {
     playbackVolume$,

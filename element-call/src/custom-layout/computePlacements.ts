@@ -13,6 +13,7 @@ import {
   orderStreams,
   type RatioId,
   type StreamDescriptor,
+  streamLayer,
 } from "./layoutConfig";
 
 /**
@@ -411,6 +412,15 @@ function freeLayout(
   size: Size,
 ): Placement[] {
   const rects = completeFreeRects(config.rects, ordered, size);
+  // Stacking: the layer decides first, then the tile brought to the front
+  // last. The result is a compact 1..n so that it is usable as a CSS z-index.
+  const stacking = [...ordered]
+    .sort(
+      (a, b) =>
+        streamLayer(config, a.key) - streamLayer(config, b.key) ||
+        rects[a.key].z - rects[b.key].z,
+    )
+    .map((s) => s.key);
   return ordered.map((s) => {
     const r = rects[s.key];
     return {
@@ -420,7 +430,7 @@ function freeLayout(
       y: r.y * size.height,
       w: r.w * size.width,
       h: r.h * size.height,
-      z: r.z,
+      z: stacking.indexOf(s.key) + 1,
     };
   });
 }

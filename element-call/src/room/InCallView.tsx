@@ -99,6 +99,7 @@ import {
 import { defaultLayoutStorage } from "../custom-layout/layoutStorage.ts";
 import { CustomLayoutView } from "../custom-layout/CustomLayoutView.tsx";
 import { CustomLayoutButton } from "../custom-layout/CustomLayoutButton.tsx";
+import { OpenLayoutMenuItem } from "../custom-layout/OpenLayoutMenuItem.tsx";
 import { LayoutPanel } from "../custom-layout/LayoutPanel.tsx";
 
 declare module "react" {
@@ -555,6 +556,8 @@ export const InCallView: FC<InCallViewProps> = ({
             showRingingStatus={showRingingStatus}
             showOutline={showOutline}
             focusable={!contentObscured}
+            // [element-custom] Open the custom layout from the standard view
+            extraMenuItems={<OpenLayoutMenuItem vm={customLayoutVm} />}
           />
         ) : (
           <SpotlightTile
@@ -574,7 +577,7 @@ export const InCallView: FC<InCallViewProps> = ({
           />
         );
       },
-    [vm, openProfile, contentObscured],
+    [vm, openProfile, contentObscured, customLayoutVm],
   );
 
   const layouts = useMemo(() => {

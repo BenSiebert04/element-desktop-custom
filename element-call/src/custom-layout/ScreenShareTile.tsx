@@ -23,6 +23,7 @@ import {
 
 import { MediaView } from "../tile/MediaView";
 import { Slider } from "../Slider";
+import { MAX_PLAYBACK_VOLUME } from "./volumeStorage";
 import { useBehavior } from "../useBehavior";
 import { type ScreenShareViewModel } from "../state/media/ScreenShareViewModel";
 import { type RemoteScreenShareViewModel } from "../state/media/RemoteScreenShareViewModel";
@@ -72,7 +73,7 @@ const RemoteVolumeItems: FC<{ vm: RemoteScreenShareViewModel }> = ({ vm }) => {
           onValueChange={vm.adjustPlaybackVolume}
           onValueCommit={vm.commitPlaybackVolume}
           min={0}
-          max={1}
+          max={MAX_PLAYBACK_VOLUME}
           step={0.01}
         />
       </MenuItem>

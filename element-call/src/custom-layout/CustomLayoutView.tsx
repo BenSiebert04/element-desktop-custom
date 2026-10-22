@@ -47,7 +47,11 @@ import {
   type Rect,
   type Size,
 } from "./computePlacements";
-import { type CustomLayoutConfig, type RatioId } from "./layoutConfig";
+import {
+  type CustomLayoutConfig,
+  type RatioId,
+  streamOpacity,
+} from "./layoutConfig";
 import { ScreenShareTile } from "./ScreenShareTile";
 import { StreamMenuItems } from "./StreamMenuItems";
 import styles from "./CustomLayoutView.module.css";
@@ -59,6 +63,11 @@ const MIN_TILE_W = 96;
 const MIN_TILE_H = 54;
 /** Inner padding of the canvas. */
 const PADDING = 8;
+/**
+ * How long the "n hidden" chip stays after the pointer last moved over the
+ * call.
+ */
+export const HIDDEN_CHIP_IDLE_MS = 5000;
 
 type Edge = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 const EDGES: Edge[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
@@ -321,6 +330,32 @@ export const CustomLayoutView: FC<Props> = ({
 
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
+  // The "n hidden" chip only shows while the pointer moves over the call
+  const [pointerActive, setPointerActive] = useState(false);
+  const [chipFocused, setChipFocused] = useState(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const onActivity = useCallback((): void => {
+    setPointerActive(true);
+    clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(
+      () => setPointerActive(false),
+      HIDDEN_CHIP_IDLE_MS,
+    );
+  }, []);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const events = ["pointermove", "pointerdown", "keydown"] as const;
+    for (const e of events) root.addEventListener(e, onActivity);
+    return (): void => {
+      for (const e of events) root.removeEventListener(e, onActivity);
+      clearTimeout(idleTimer.current);
+    };
+  }, [onActivity]);
+
   const onTilePointerMove = (e: ReactPointerEvent): void => {
     const i = interactionRef.current;
     if (!i || i.type === "divider" || i.pointerId !== e.pointerId) return;
@@ -479,7 +514,9 @@ export const CustomLayoutView: FC<Props> = ({
           transform: `translate(${rect.x}px, ${rect.y}px)`,
           width: rect.w,
           height: rect.h,
-          zIndex: active ? 1000 : tile.z,
+          // While dragged, a tile is in front of everything
+          zIndex: active ? 100000 : tile.z,
+          opacity: streamOpacity(config, tile.key),
         }}
         data-testid="custom-layout-tile"
         data-stream-key={tile.key}
@@ -617,6 +654,7 @@ export const CustomLayoutView: FC<Props> = ({
   };
 
   const hiddenCount = layout.hidden.length;
+  const showHiddenChip = hiddenCount > 0 && (pointerActive || chipFocused);
   const nothingVisible = layout.tiles.length === 0 && streams.length > 0;
 
   return (
@@ -626,6 +664,7 @@ export const CustomLayoutView: FC<Props> = ({
       aria-hidden={ariaHidden}
       data-testid="custom-layout"
       data-preset={config.preset}
+      ref={rootRef}
     >
       <div className={styles.inner} ref={canvasRef}>
         {layout.tiles.map(renderTile)}
@@ -666,11 +705,13 @@ export const CustomLayoutView: FC<Props> = ({
           </div>
         )}
       </div>
-      {hiddenCount > 0 && (
+      {showHiddenChip && (
         <button
           type="button"
           className={styles.hiddenChip}
           onClick={() => vm.setPanelOpen(true)}
+          onFocus={() => setChipFocused(true)}
+          onBlur={() => setChipFocused(false)}
           data-testid="custom-layout-hidden-chip"
           tabIndex={focusable ? undefined : -1}
         >

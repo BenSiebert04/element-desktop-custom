@@ -7,8 +7,8 @@ Please see LICENSE in the repository root for full details.
 
 import { BehaviorSubject } from "rxjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { TooltipProvider } from "@vector-im/compound-web";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { Menu, TooltipProvider } from "@vector-im/compound-web";
 import { type FC } from "react";
 
 import { testScope } from "../utils/test";
@@ -18,8 +18,14 @@ import { type ScreenShareViewModel } from "../state/media/ScreenShareViewModel";
 import { createCustomLayoutViewModel } from "./CustomLayoutViewModel";
 import { type KeyValueStore, LayoutStorage } from "./layoutStorage";
 import { type CustomLayoutConfig, defaultConfig } from "./layoutConfig";
-import { CustomLayoutView, moveRect, resizeRect } from "./CustomLayoutView";
+import {
+  CustomLayoutView,
+  HIDDEN_CHIP_IDLE_MS,
+  moveRect,
+  resizeRect,
+} from "./CustomLayoutView";
 import { LayoutPanel } from "./LayoutPanel";
+import { StreamMenuItems } from "./StreamMenuItems";
 
 // The media tiles themselves are covered by Element Call's own tests
 vi.mock("../tile/GridTile", () => ({
@@ -185,13 +191,42 @@ describe("CustomLayoutView", () => {
     expect(tiles().map((el) => el.dataset.streamKey)).not.toContain(
       camera("alice").id,
     );
-    // Still part of the call; reachable through the hidden chip
+    // Still part of the call; reachable through the hidden chip, which shows
+    // while the pointer moves over the call
     expect(vm.streams$.value).toHaveLength(3);
+    fireEvent.pointerMove(screen.getByTestId("custom-layout"));
     expect(screen.getByTestId("custom-layout-hidden-chip")).toHaveTextContent(
       "1 hidden",
     );
     fireEvent.click(screen.getByTestId("custom-layout-hidden-chip"));
     expect(vm.panelOpen$.value).toBe(true);
+  });
+
+  it("shows the hidden chip only while the pointer moves, for 5 seconds", () => {
+    vi.useFakeTimers();
+    try {
+      setup({ config: { hidden: [camera("alice").id] } });
+      const chip = (): HTMLElement | null =>
+        screen.queryByTestId("custom-layout-hidden-chip");
+      expect(chip()).toBeNull();
+      fireEvent.pointerMove(screen.getByTestId("custom-layout"));
+      expect(chip()).not.toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      // Moving again restarts the 5 seconds
+      fireEvent.pointerMove(screen.getByTestId("custom-layout"));
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(chip()).not.toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(HIDDEN_CHIP_IDLE_MS);
+      });
+      expect(chip()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("offers to show everything again when all streams are hidden", () => {
@@ -455,5 +490,75 @@ describe("LayoutPanel", () => {
     expect(vm.active$.value).toBe(false);
     expect(vm.config$.value).toEqual({ ...defaultConfig(), preset: "default" });
     expect(storage.loadRoom("!room")?.preset).toBe("default");
+  });
+});
+
+describe("transparency and layers", () => {
+  it("renders tiles with their transparency and stacks them by layer", () => {
+    const alice = camera("alice").id;
+    const bob = camera("bob").id;
+    const { vm } = setup({ config: { preset: "free" } });
+    act(() => {
+      vm.setOpacity(alice, 0.3);
+      vm.setLayer(alice, 2);
+      // Bob comes to the front of his layer, but stays behind layer 2
+      vm.bringToFront(bob);
+    });
+    expect(tile(alice).style.opacity).toBe("0.3");
+    expect(tile(bob).style.opacity).toBe("1");
+    expect(Number(tile(alice).style.zIndex)).toBeGreaterThan(
+      Number(tile(bob).style.zIndex),
+    );
+  });
+
+  function renderMenu(config: Partial<CustomLayoutConfig>) {
+    const { vm } = setup({ config });
+    const key = camera("alice").id;
+    render(
+      <TooltipProvider>
+        <Menu
+          open
+          onOpenChange={() => {}}
+          title="Menu"
+          trigger={<button aria-label="Open menu" />}
+        >
+          <StreamMenuItems
+            vm={vm}
+            streamKey={key}
+            userId={camera("alice").userId}
+            onFullscreen={() => {}}
+          />
+        </Menu>
+      </TooltipProvider>,
+    );
+    return { vm, key };
+  }
+
+  it("offers front/back and layers in the free layout", () => {
+    const { vm, key } = renderMenu({ preset: "free" });
+    const layer = screen.getByTestId("custom-layout-layer");
+    expect(layer).toHaveTextContent("Layer 0");
+    fireEvent.click(within(layer).getByRole("button", { name: /higher/ }));
+    expect(vm.config$.value.layers[key]).toBe(1);
+    expect(layer).toHaveTextContent("Layer 1");
+    fireEvent.click(within(layer).getByRole("button", { name: /lower/ }));
+    expect(vm.config$.value.layers[key]).toBeUndefined();
+    expect(
+      screen.getByRole("menuitem", { name: "Bring to front" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Send to back" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers transparency in every layout, layers only in the free one", () => {
+    renderMenu({ preset: "auto" });
+    expect(screen.getByTestId("custom-layout-transparency")).toHaveTextContent(
+      "Transparency: 0 %",
+    );
+    expect(screen.queryByTestId("custom-layout-layer")).toBeNull();
+    expect(
+      screen.queryByRole("menuitem", { name: "Bring to front" }),
+    ).toBeNull();
   });
 });

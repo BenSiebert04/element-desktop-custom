@@ -16,7 +16,13 @@ import {
 } from "@livekit/components-react";
 import { logger as rootLogger } from "matrix-js-sdk/lib/logger";
 
-import { useEarpieceAudioConfig } from "../MediaDevicesContext";
+import { useObservableEagerState } from "observable-hooks";
+
+import {
+  useEarpieceAudioConfig,
+  useMediaDevices,
+} from "../MediaDevicesContext";
+import { useUrlParams } from "../UrlParams";
 import { useReactiveState } from "../useReactiveState";
 import * as controls from "../controls";
 
@@ -115,7 +121,6 @@ export function LivekitRoomAudioRenderer({
   // shouldUseAudioContext is set to false if stereoPan === 0 to allow standby bluetooth playback.
 
   const { pan: stereoPan, volume: volumeFactor } = useEarpieceAudioConfig();
-  const shouldUseAudioContext = stereoPan !== 0;
 
   // initialize the potentially used audio context.
   const [audioContext, setAudioContext] = useState<AudioContext | undefined>(
@@ -128,6 +133,42 @@ export function LivekitRoomAudioRenderer({
       void ctx.close();
     };
   }, []);
+  // [element-custom] Play through the audio context wherever it can follow the
+  // selected output device (Chromium, so the desktop app): only there can a
+  // person's volume go above 100 %. If the device can't be set, fall back to
+  // Element Call's normal playback.
+  const audioOutputId = useObservableEagerState(
+    useMediaDevices().audioOutput.selected$,
+  )?.id;
+  const { controlledAudioDevices } = useUrlParams();
+  const [contextFollowsOutput, setContextFollowsOutput] = useState(false);
+  useEffect(() => {
+    if (
+      !audioContext ||
+      !("setSinkId" in audioContext) ||
+      controlledAudioDevices
+    ) {
+      setContextFollowsOutput(false);
+      return;
+    }
+    let current = true;
+    // @ts-expect-error - setSinkId is not in the AudioContext types yet
+    (audioContext.setSinkId(audioOutputId ?? "") as Promise<void>).then(
+      () => current && setContextFollowsOutput(true),
+      (e: unknown) => {
+        rootLogger.warn(
+          "[MatrixAudioRenderer] Audio context can't use the output device",
+          e,
+        );
+        if (current) setContextFollowsOutput(false);
+      },
+    );
+    return (): void => {
+      current = false;
+    };
+  }, [audioContext, audioOutputId, controlledAudioDevices]);
+  const shouldUseAudioContext = stereoPan !== 0 || contextFollowsOutput;
+
   const audioNodes = useMemo(
     () => ({
       gain: audioContext?.createGain(),

@@ -18,6 +18,7 @@ import {
 import { type ObservableScope } from "../ObservableScope";
 import { createVolumeControls, type VolumeControls } from "../VolumeControls";
 import { observeTrackReference$ } from "../observeTrackReference";
+import { getVolumeStorage } from "../../custom-layout/volumeStorage";
 
 export interface RemoteScreenShareViewModel
   extends BaseScreenShareViewModel, VolumeControls {
@@ -53,6 +54,10 @@ export function createRemoteScreenShare(
           ),
         ),
       ),
+      // [element-custom] Remember the volume per person across calls
+      initialVolume: getVolumeStorage().load(inputs.userId, "screenShare"),
+      onVolumeCommitted: (volume) =>
+        getVolumeStorage().save(inputs.userId, "screenShare", volume),
     }),
     local: false,
     videoEnabled$: scope.behavior(
