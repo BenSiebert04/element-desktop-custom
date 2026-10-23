@@ -133,6 +133,58 @@ jobs:
                   if-no-files-found: error
                   retention-days: 7
 
+    app-audio:
+        name: App audio (Windows, build & test)
+        runs-on: windows-2025
+        defaults:
+            run:
+                shell: bash
+                working-directory: desktop/app-audio
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            # Tests only: the runner has no sound card. Installs a virtual one (VB-Cable).
+            - uses: LABSN/sound-ci-helpers@e9d6ba52163a3283714a68412036ddf33f78d49c # main
+
+            - name: Start the Windows audio service
+              shell: powershell
+              working-directory: .
+              run: |
+                  Set-Service -Name Audiosrv -StartupType Automatic
+                  Restart-Service -Name AudioEndpointBuilder -Force
+                  Start-Service -Name Audiosrv
+                  Get-CimInstance Win32_SoundDevice | Format-Table Name, Status
+
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+              with:
+                  node-version: 24
+                  cache: npm
+                  cache-dependency-path: desktop/app-audio/package-lock.json
+
+            # Without install scripts: the native module is built explicitly below
+            - name: Install dependencies
+              run: |
+                  npm ci --ignore-scripts
+                  node node_modules/electron/install.js
+
+            - name: Build native module
+              run: npm run build
+
+            - name: Tests (logic, native capture, Electron screen share)
+              run: npm test
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: app-audio
+                  path: |
+                      desktop/app-audio/package.json
+                      desktop/app-audio/lib
+                      desktop/app-audio/build/Release/app_audio.node
+                  if-no-files-found: error
+                  retention-days: 7
+
     webapp:
         name: Assemble web app
         needs: [element-call, element-web]
@@ -203,7 +255,7 @@ jobs:
 
     windows:
         name: Package Windows x64
-        needs: webapp
+        needs: [webapp, app-audio]
         runs-on: windows-2025
         defaults:
             run:
@@ -255,8 +307,15 @@ jobs:
                   name: webapp
                   path: build/webapp
 
-            - name: Apply Mosaix branding and web app
-              run: node scripts/prepare-desktop.mjs build/element-web/apps/desktop --webapp build/webapp
+            - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+              with:
+                  name: app-audio
+                  path: build/app-audio
+
+            - name: Apply Mosaix branding, web app and app audio
+              run: >
+                  node scripts/prepare-desktop.mjs build/element-web/apps/desktop
+                  --webapp build/webapp --app-audio build/app-audio
 
             - name: Install dependencies
               working-directory: build/element-web/apps/desktop
@@ -280,6 +339,12 @@ jobs:
                   VERSION: ${{ steps.version.outputs.version }}
                   # No code signing certificate: build an unsigned app
                   CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+            - name: Check the packaged app audio module
+              working-directory: build/element-web/apps/desktop/dist
+              run: |
+                  test -f win-unpacked/resources/app-audio/app_audio.node
+                  test -f win-unpacked/resources/app-audio/lib/index.cjs
 
             - name: Checksums
               working-directory: build/element-web/apps/desktop/dist

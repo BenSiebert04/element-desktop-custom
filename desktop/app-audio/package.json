@@ -1,0 +1,19 @@
+{
+    "name": "@mosaix/app-audio",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Screen share audio for Mosaix on Windows: one application's sound, or the system's sound without Mosaix",
+    "license": "AGPL-3.0-only",
+    "main": "lib/index.cjs",
+    "scripts": {
+        "build": "node-gyp rebuild",
+        "test": "node --test --test-concurrency=1 test/*.test.mjs"
+    },
+    "dependencies": {
+        "node-addon-api": "8.5.0"
+    },
+    "devDependencies": {
+        "electron": "44.4.5",
+        "node-gyp": "13.1.0"
+    }
+}

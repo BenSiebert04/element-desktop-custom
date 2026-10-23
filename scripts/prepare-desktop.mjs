@@ -11,7 +11,7 @@
 //  - build/icon.png, build/icon.ico (app icon)
 //  - webapp/                 (the assembled web app, if --webapp is given)
 //
-// Usage: node scripts/prepare-desktop.mjs <path to apps/desktop> [--webapp build/webapp]
+// Usage: node scripts/prepare-desktop.mjs <path to apps/desktop> [--webapp build/webapp] [--app-audio <dir>]
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const [desktopDirArg, ...rest] = process.argv.slice(2);
 if (!desktopDirArg) {
-    console.error("Usage: node scripts/prepare-desktop.mjs <apps/desktop> [--webapp <dir>]");
+    console.error("Usage: node scripts/prepare-desktop.mjs <apps/desktop> [--webapp <dir>] [--app-audio <dir>]");
     process.exit(1);
 }
 const desktopDir = path.resolve(desktopDirArg);
@@ -51,6 +51,22 @@ copy("branding/variant.json", "variant.json");
 copy("desktop/electron-builder.custom.ts", "electron-builder.custom.ts");
 copy("branding/build/icon.png", "build/icon.png");
 copy("branding/build/icon.ico", "build/icon.ico");
+
+// Sound for screen sharing: lib/ and the built native module
+const appAudioIndex = rest.indexOf("--app-audio");
+if (appAudioIndex !== -1) {
+    const from = path.resolve(rest[appAudioIndex + 1]);
+    const nativeModule = [path.join(from, "app_audio.node"), path.join(from, "build", "Release", "app_audio.node")].find(
+        (f) => existsSync(f),
+    );
+    if (!nativeModule) throw new Error(`No app_audio.node in ${from}`);
+    const to = path.join(desktopDir, "app-audio");
+    rmSync(to, { recursive: true, force: true });
+    cpSync(path.join(from, "lib"), path.join(to, "lib"), { recursive: true });
+    cpSync(path.join(from, "package.json"), path.join(to, "package.json"));
+    cpSync(nativeModule, path.join(to, "app_audio.node"));
+    console.log(`${from} -> ${to}`);
+}
 
 const webappIndex = rest.indexOf("--webapp");
 if (webappIndex !== -1) {

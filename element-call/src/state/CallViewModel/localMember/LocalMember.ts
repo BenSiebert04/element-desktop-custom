@@ -89,6 +89,7 @@ import {
   withScreenShareAudio,
   withScreenShareMode,
 } from "../../../custom-layout/screenShareMode.ts";
+import { notifyDesktopScreenShareStopped } from "../../../custom-layout/desktopBridge.ts";
 import { or$ } from "../../../utils/observable.ts";
 import { getSFUConfigWithOpenID } from "../../../livekit/openIDSFU.ts";
 
@@ -926,6 +927,11 @@ export const createLocalMembership$ = ({
       );
     };
   }
+
+  // [element-custom] Let the desktop app end the capture of the shared sound
+  sharingScreen$.pipe(pairwise(), scope.bind()).subscribe(([before, now]) => {
+    if (before && !now) notifyDesktopScreenShareStopped();
+  });
 
   // [element-custom] Switch a running screen share to another mode
   screenShareMode.value$.pipe(skip(1), scope.bind()).subscribe(() => {

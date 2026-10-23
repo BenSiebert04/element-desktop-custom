@@ -87,10 +87,18 @@ einer laufenden Freigabe umschaltbar:
 - **Highspeed:** bis zu 60 fps haben Vorrang, Auflösung und Qualität sinken
   bei Bedarf. Für Spiele und Videos.
 
-Im selben Menü: **Ton mitübertragen** (standardmäßig an). In der Desktop-App
-unter Windows wird dabei der Ton des ganzen Computers übertragen; eine
-einzelne Anwendung lässt sich technisch nicht auswählen (Electron bietet nur
-den Systemton an). Gilt ab der nächsten Freigabe.
+Im selben Menü: **Ton mitübertragen** (standardmäßig an, gilt ab der
+nächsten Freigabe). In der Desktop-App unter Windows (ab Windows 10 2004):
+
+- **Fenster teilen:** nur der Ton dieser Anwendung (z. B. Spiel, Browser,
+  Spotify), wie bei Discord.
+- **Bildschirm teilen:** der Ton des ganzen Computers **ohne Mosaix selbst**,
+  damit niemand den Anruf doppelt hört.
+- **Mosaix-Fenster teilen:** Bild ja, Ton nicht (das wäre der Anruf).
+
+Die anderen können den Ton einer Bildschirmfreigabe wie eine Person leiser,
+lauter (bis 200 %) oder für sich stumm stellen. Am Server ist dafür nichts
+nötig.
 
 Layout-Einstellungen werden pro Raum lokal gespeichert, optional mit einem
 globalen Standard; Lautstärken pro Person.
