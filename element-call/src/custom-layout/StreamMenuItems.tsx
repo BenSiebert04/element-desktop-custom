@@ -33,6 +33,7 @@ import {
   streamLayer,
   streamOpacity,
 } from "./layoutConfig";
+import { PopoutMenuItems } from "./PopoutMenuItems";
 import styles from "./StreamMenuItems.module.css";
 
 interface Props {
@@ -85,6 +86,7 @@ export const StreamMenuItems: FC<Props> = ({
         label={t("custom_layout.fullscreen")}
         onSelect={onFullscreen}
       />
+      <PopoutMenuItems popouts={vm.popouts} streamKey={streamKey} />
       {free && (
         <>
           <MenuItem

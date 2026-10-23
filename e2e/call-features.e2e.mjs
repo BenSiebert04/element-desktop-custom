@@ -2,7 +2,7 @@
 // in a real call (local backend, see e2e/README.md). Anna and Ben join one
 // call; the checks are made from Ben's point of view:
 //
-//  - standard view: a tile's menu opens "Customise layout"
+//  - standard view: a tile's menu opens "Customise layout" and offers "Pop out"
 //  - free layout: transparency and layers from the tile menu, a higher layer
 //    stays in front of a tile brought to the front
 //  - Anna's volume set to 200 %: her audio is played through a gain of 2
@@ -93,6 +93,7 @@ try {
     assert.equal(await b.locator('[data-testid="custom-layout"]').count(), 0);
     const standardTile = b.getByTestId("videoTile").filter({ hasText: "Anna" });
     await openTileMenu(b, standardTile);
+    assert.equal(await b.getByRole("menuitem", { name: "Pop out" }).count(), 1, "pop-out offered in the standard view");
     await b.getByRole("menuitem", { name: "Customise layout" }).click();
     await b.getByTestId("custom-layout-panel").waitFor();
     log("OK standard view: tile menu opens the layout panel");

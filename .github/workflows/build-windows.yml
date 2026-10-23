@@ -328,6 +328,15 @@ jobs:
                   pnpm exec tsc
                   node scripts/copy-res.ts
 
+            # Pop-outs (desktop/electron-tests/popout.mjs): Element Call's
+            # iframe opens and fills its own window, which can stay on top
+            - name: Pop-out windows in Electron
+              working-directory: build/element-web/apps/desktop
+              timeout-minutes: 5
+              run: |
+                  node node_modules/electron/install.js
+                  pnpm exec electron ../../../../desktop/electron-tests/popout.mjs lib/popouts.js
+
             - name: Pack web app
               working-directory: build/element-web/apps/desktop
               run: pnpm run asar-webapp

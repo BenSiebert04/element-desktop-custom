@@ -101,6 +101,7 @@ import { CustomLayoutView } from "../custom-layout/CustomLayoutView.tsx";
 import { CustomLayoutButton } from "../custom-layout/CustomLayoutButton.tsx";
 import { OpenLayoutMenuItem } from "../custom-layout/OpenLayoutMenuItem.tsx";
 import { LayoutPanel } from "../custom-layout/LayoutPanel.tsx";
+import { Popouts } from "../custom-layout/Popouts.tsx";
 
 declare module "react" {
   interface CSSProperties {
@@ -541,6 +542,10 @@ export const InCallView: FC<InCallViewProps> = ({
             ? model.showOutline$
             : constant(false),
         );
+        // [element-custom] The tile's stream, for its pop-out
+        const gridMedia = useBehavior(
+          model instanceof GridTileViewModel ? model.media$ : constant(null),
+        );
 
         return model instanceof GridTileViewModel ? (
           <GridTile
@@ -557,7 +562,12 @@ export const InCallView: FC<InCallViewProps> = ({
             showOutline={showOutline}
             focusable={!contentObscured}
             // [element-custom] Open the custom layout from the standard view
-            extraMenuItems={<OpenLayoutMenuItem vm={customLayoutVm} />}
+            extraMenuItems={
+              <OpenLayoutMenuItem
+                vm={customLayoutVm}
+                streamKey={gridMedia?.id}
+              />
+            }
           />
         ) : (
           <SpotlightTile
@@ -762,6 +772,8 @@ export const InCallView: FC<InCallViewProps> = ({
       {earpieceOverlay}
       <ReactionsOverlay vm={vm} />
       {footer}
+      {/* [element-custom] Streams in windows of their own */}
+      <Popouts vm={customLayoutVm} />
       {customLayoutPanelOpen && showModals && layout.type !== "pip" && (
         <LayoutPanel
           vm={customLayoutVm}
