@@ -163,8 +163,11 @@ jobs:
                   cache: npm
                   cache-dependency-path: desktop/app-audio/package-lock.json
 
+            # Without install scripts: the native module is built explicitly below
             - name: Install dependencies
-              run: npm ci
+              run: |
+                  npm ci --ignore-scripts
+                  node node_modules/electron/install.js
 
             - name: Build native module
               run: npm run build
