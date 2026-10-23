@@ -18,12 +18,24 @@ import { PrivateVoiceStore } from "../private-voice/PrivateVoiceStore";
 import { parsePrivateVoiceConfig } from "../private-voice/parser";
 import { getManagedRoomName } from "../private-voice/roomList";
 import { exampleConfig, OWN_USER, SPACE_ID } from "../private-voice/testData";
-import { activeJams, cleanTitle, isJamUrl, JAM_EVENT_TYPE, jamContent, parseJam } from "./jam";
+import {
+    activeJams,
+    cleanTitle,
+    isJamUrl,
+    JAM_EVENT_TYPE,
+    JAM_POLICY_EVENT_TYPE,
+    jamChecker,
+    jamContent,
+    jamOwner,
+    jamStateKey,
+    parseJam,
+} from "./jam";
 import { JamPanel } from "./JamPanel";
 
 const JAM_ROOM = "!jams";
 const BOB = "@bob:example.org";
 const CAROL = "@carol:example.org";
+const CHECKER = "@jam-checker:example.org";
 const JAM_URL = "https://open.spotify.com/socialsession/AbC123";
 
 function useConfig(withJamRoom: boolean): void {
@@ -46,8 +58,12 @@ function useConfig(withJamRoom: boolean): void {
     });
 }
 
-function jamEvent(sender: string, content: Record<string, unknown>, stateKey = sender) {
+function jamEvent(sender: string, content: Record<string, unknown>, stateKey = jamStateKey(sender)) {
     return mkEvent({ event: true, type: JAM_EVENT_TYPE, room: JAM_ROOM, user: sender, skey: stateKey, content });
+}
+
+function policyEvent(content: Record<string, unknown>) {
+    return mkEvent({ event: true, type: JAM_POLICY_EVENT_TYPE, room: JAM_ROOM, user: OWN_USER, skey: "", content });
 }
 
 function makeRoom(client: MatrixClient): Room {
@@ -71,7 +87,7 @@ describe("Jam data", () => {
             "https://evil.example/socialsession/AbC123",
             "https://open.spotify.com.evil.example/socialsession/AbC",
             "javascript:alert(1)",
-            "https://open.spotify.com/socialsession/AbC123\"><script>",
+            'https://open.spotify.com/socialsession/AbC123"><script>',
             "https://spotify.link/" + "a".repeat(600),
             42,
         ]) {
@@ -85,16 +101,59 @@ describe("Jam data", () => {
         expect(cleanTitle(null)).toBe("");
     });
 
-    it("ignores ended, invalid and foreign entries", () => {
-        expect(parseJam(jamEvent(BOB, jamContent(JAM_URL, "x", 1000)))).toMatchObject({
+    it("reads the owner from the state key", () => {
+        expect(jamStateKey(BOB)).toBe("jam/@bob:example.org");
+        expect(jamOwner("jam/@bob:example.org")).toBe(BOB);
+        for (const bad of [undefined, "", "jam/", "@bob:example.org", "jam/bob", "jam/@", "jam/@bo b", "x/@bob:a"]) {
+            expect(jamOwner(bad)).toBeNull();
+        }
+    });
+
+    it("accepts a member's own entry only under their own key", () => {
+        expect(parseJam(jamEvent(BOB, jamContent(JAM_URL, "x", 1000)), null)).toMatchObject({
             userId: BOB,
             url: JAM_URL,
             startedTs: 1000,
+            checkedTs: null,
         });
-        expect(parseJam(jamEvent(BOB, { status: "ended", url: JAM_URL }))).toBeNull();
-        expect(parseJam(jamEvent(BOB, { status: "active", url: "https://example.org" }))).toBeNull();
-        // Someone else's state key: not their Jam
-        expect(parseJam(jamEvent(BOB, jamContent(JAM_URL, ""), CAROL))).toBeNull();
+        expect(parseJam(jamEvent(BOB, { status: "ended", url: JAM_URL }), null)).toBeNull();
+        expect(parseJam(jamEvent(BOB, { status: "active", url: "https://example.org" }), null)).toBeNull();
+        // Someone else's key: not their Jam
+        expect(parseJam(jamEvent(BOB, jamContent(JAM_URL, ""), jamStateKey(CAROL)), null)).toBeNull();
+        // The old key (bare Matrix ID) is no longer used
+        expect(parseJam(jamEvent(BOB, jamContent(JAM_URL, ""), BOB), null)).toBeNull();
+        // Members cannot confirm their own Jam
+        expect(parseJam(jamEvent(BOB, { ...jamContent(JAM_URL, ""), checked_ts: 5 }), null)?.checkedTs).toBeNull();
+    });
+
+    it("accepts corrections only from the checking service named by the room", () => {
+        const corrected = jamEvent(
+            CHECKER,
+            { ...jamContent(JAM_URL, "Chill", 1000), checked_ts: 2000 },
+            jamStateKey(BOB),
+        );
+        expect(parseJam(corrected, CHECKER)).toMatchObject({ userId: BOB, startedTs: 1000, checkedTs: 2000 });
+        // Without (or with another) checking service, the same event counts for nothing
+        expect(parseJam(corrected, null)).toBeNull();
+        expect(parseJam(corrected, CAROL)).toBeNull();
+        // Ended by the checking service
+        expect(
+            parseJam(jamEvent(CHECKER, { status: "ended", ended_reason: "ended" }, jamStateKey(BOB)), CHECKER),
+        ).toBeNull();
+    });
+
+    it("takes the checking service from the room's jam policy", () => {
+        const client = stubClient();
+        const room = makeRoom(client);
+        expect(jamChecker(room)).toBeNull();
+        room.currentState.setStateEvents([policyEvent({ checker: "not a user id" })]);
+        expect(jamChecker(room)).toBeNull();
+        room.currentState.setStateEvents([policyEvent({ checker: CHECKER })]);
+        expect(jamChecker(room)).toBe(CHECKER);
+        room.currentState.setStateEvents([
+            jamEvent(CHECKER, { ...jamContent(JAM_URL, "", 1000), checked_ts: 2000 }, jamStateKey(BOB)),
+        ]);
+        expect(activeJams(room)).toMatchObject([{ userId: BOB, checkedTs: 2000 }]);
     });
 
     it("lists the running Jams of members, newest first", () => {
@@ -148,6 +207,19 @@ describe("JamPanel", () => {
         expect(join).toHaveAttribute("rel", "noreferrer noopener");
     });
 
+    it("hides a Jam the checking service has ended", () => {
+        const room = makeRoom(client);
+        room.currentState.setStateEvents([policyEvent({ checker: CHECKER }), jamEvent(BOB, jamContent(JAM_URL, ""))]);
+        renderPanel(room);
+        expect(screen.getAllByTestId("jam-card")).toHaveLength(1);
+        act(() =>
+            room.currentState.setStateEvents([
+                jamEvent(CHECKER, { status: "ended", ended_reason: "expired" }, jamStateKey(BOB)),
+            ]),
+        );
+        expect(screen.queryAllByTestId("jam-card")).toHaveLength(0);
+    });
+
     it("updates live when a Jam starts or ends", () => {
         const room = makeRoom(client);
         renderPanel(room);
@@ -176,8 +248,12 @@ describe("JamPanel", () => {
             JAM_ROOM,
             JAM_EVENT_TYPE,
             expect.objectContaining({ url: JAM_URL, title: "Chill", status: "active" }),
-            client.getSafeUserId(),
+            jamStateKey(client.getSafeUserId()),
         );
+        // checked_ts and ended_reason are the server's
+        const sent = (client.sendStateEvent as ReturnType<typeof vi.fn>).mock.calls[0][2];
+        expect(sent).not.toHaveProperty("checked_ts");
+        expect(sent).not.toHaveProperty("ended_reason");
     });
 
     it("lets the owner end their Jam instead of joining it", async () => {
@@ -191,7 +267,7 @@ describe("JamPanel", () => {
         expect(screen.queryByTestId("jam-join")).toBeNull();
         expect(screen.queryByTestId("jam-share")).toBeNull();
         await act(async () => fireEvent.click(screen.getByTestId("jam-end")));
-        expect(client.sendStateEvent).toHaveBeenCalledWith(JAM_ROOM, JAM_EVENT_TYPE, { status: "ended" }, me);
+        expect(client.sendStateEvent).toHaveBeenCalledWith(JAM_ROOM, JAM_EVENT_TYPE, { status: "ended" }, "jam/" + me);
     });
 
     it("shows the number of running Jams next to the channel name", () => {

@@ -83,15 +83,26 @@ selbst. In der Raumliste steht beim Kanal die Zahl laufender Jams
   Einladen → Link teilen), optional ein Titel. Angenommen werden nur
   `https://open.spotify.com/socialsession/…` und `https://spotify.link/…`.
 - **Beenden:** „Jam beenden“ beim eigenen Eintrag.
-- **Daten:** State-Event `io.github.bensiebert04.mosaix.jam` mit der eigenen
-  Matrix-ID als State-Key:
+- **Daten:** State-Event `io.github.bensiebert04.mosaix.jam` mit dem State-Key
+  `"jam/"` + eigene vollständige Matrix-ID (z. B. `jam/@alice:example.org`):
   `{"url", "title", "started_ts", "status": "active" | "ended", "checked_ts", "ended_reason"}`.
-  Mosaix zeigt nur Einträge mit `status: "active"`, gültigem Link, Absender =
-  State-Key und Mitgliedschaft im Raum. Titel sind reiner Text (max. 80
-  Zeichen).
-- **Server:** legt den Kanal an (State-Event für Mitglieder erlaubt), prüft die
-  Links und setzt beendete Jams auf `"ended"`. Keine Spotify-Developer-App,
-  keine Spotify-Konten auf dem Server.
+  Mosaix setzt beim Teilen und Beenden nur `url`, `title`, `started_ts` und
+  `status`; `checked_ts` und `ended_reason` setzt ausschließlich der Server.
+  Kein nackter `@…`-Key, weil stabile Raumversionen fremde State-Keys, die mit
+  `@` beginnen, nur ihrem Besitzer erlauben; der Prüfdienst muss Einträge aber
+  korrigieren können.
+- **Wer gilt:** Den Besitzer liest Mosaix hinter `jam/` aus. Ein Eintrag zählt
+  nur, wenn er vom Besitzer selbst stammt (`state_key === "jam/" + sender`)
+  oder vom Prüfdienst des Raums. Außerdem: `status: "active"`, gültiger Link,
+  Besitzer ist Mitglied. Titel sind reiner Text (max. 80 Zeichen).
+- **Prüfdienst:** Seine Matrix-ID steht im Raum-State-Event
+  `io.github.bensiebert04.mosaix.jam.policy` (State-Key `""`, Feld `checker`),
+  das nur die Raumverwaltung schreiben darf. Es gibt keine fest eingebaute
+  Bot-ID und kein Vertrauen auf Namenspräfixe; ohne Policy-Event werden nur
+  Einträge der Besitzer selbst angezeigt.
+- **Server:** legt den Kanal an (Jam-Event für Mitglieder erlaubt, Policy-Event
+  nur für die Verwaltung), prüft die Links und setzt beendete Jams auf
+  `"ended"`. Keine Spotify-Developer-App, keine Spotify-Konten auf dem Server.
 - **Spotify:** Den Jam startet der Gastgeber (Premium); wer beitreten kann,
   regelt Spotify.
 

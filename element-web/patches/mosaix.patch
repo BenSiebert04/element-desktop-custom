@@ -467,7 +467,7 @@ index f6b3884..e004cd9 100644
              vi.spyOn(SettingsStore, "getValue").mockReturnValue(true);
              vi.spyOn(MessagePreviewStore.instance, "getPreviewForRoom").mockResolvedValue({
 diff --git a/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts b/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
-index 32bcb06..b7b1e0c 100644
+index 32bcb06..156fedb 100644
 --- a/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
 +++ b/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
 @@ -5,6 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
@@ -477,7 +477,7 @@ index 32bcb06..b7b1e0c 100644
 +import { getManagedRoomName, isVirtualManagedSection } from "../../mosaix/private-voice/roomList";
 +import { PrivateVoiceStore } from "../../mosaix/private-voice/PrivateVoiceStore";
 +import { UPDATE_EVENT } from "../../stores/AsyncStore";
-+import { JAM_EVENT_TYPE } from "../../mosaix/jam/jam";
++import { JAM_EVENT_TYPE, JAM_POLICY_EVENT_TYPE } from "../../mosaix/jam/jam";
  import {
      BaseViewModel,
      RoomNotifState,
@@ -501,19 +501,20 @@ index 32bcb06..b7b1e0c 100644
  
          // Rebuild the available sections when their order changes or when one is created/renamed/removed
          const orderSectionsRef = SettingsStore.watchSetting("RoomList.OrderedCustomSections", null, () =>
-@@ -239,6 +247,11 @@ export class RoomListItemViewModel
+@@ -239,6 +247,12 @@ export class RoomListItemViewModel
          this.updateItem();
      };
  
 +    // [mosaix]
 +    private onRoomStateEvent = (...args: unknown[]): void => {
-+        if ((args[0] as MatrixEvent).getType() === JAM_EVENT_TYPE) this.updateItem();
++        const type = (args[0] as MatrixEvent).getType();
++        if (type === JAM_EVENT_TYPE || type === JAM_POLICY_EVENT_TYPE) this.updateItem();
 +    };
 +
      /**
       * Update the item snapshot with current sync data.
       * Preserves the message preview which is managed separately.
-@@ -388,7 +401,8 @@ export class RoomListItemViewModel
+@@ -388,7 +402,8 @@ export class RoomListItemViewModel
          return {
              id: room.roomId,
              room,
@@ -523,7 +524,7 @@ index 32bcb06..b7b1e0c 100644
              isBold: notifState.hasAnyNotificationOrActivity,
              messagePreview,
              notification: {
-@@ -535,6 +549,8 @@ export class RoomListItemViewModel
+@@ -535,6 +550,8 @@ export class RoomListItemViewModel
                  // Exclude the Chats because the user toggle the other sections to move rooms in and out of the Chats section.
                  // Also exclude the default sections because they are available as toggles in the main context menu, and we don't want them to be duplicated in the "Move to section" submenu.
                  .filter((tag) => !isDefaultSectionTag(tag))

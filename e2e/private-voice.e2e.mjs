@@ -152,6 +152,8 @@ try {
         "https://open.spotify.com/socialsession/BenJam42",
     );
     assert.deepEqual(await headerCallButtons(), [], "no calls in the jam channel");
+    assert.equal(await panel.getByText("Gefälscht").count(), 0, "an entry under someone else's key is not shown");
+
     await panel.getByTestId("jam-share").click();
     await panel.getByTestId("jam-link").fill("https://example.org/not-a-jam");
     assert.equal(await panel.getByTestId("jam-share-submit").getAttribute("aria-disabled"), "true");
@@ -163,7 +165,31 @@ try {
     await page.screenshot({ path: path.join(RESULTS, "private-voice-6-jams.png") });
     await panel.getByTestId("jam-end").click();
     await panel.locator('[data-testid="jam-card"]').filter({ hasText: "Annas Playlist" }).waitFor({ state: "detached", timeout: 15000 });
-    log("OK jam channel: running Jam with join link, own Jam shared and ended, live count in the list");
+
+    // The checking service named by the room's policy ends Ben's Jam
+    const { access_token: checkerToken } = await (
+        await fetch(`${HS}/_matrix/client/v3/login`, {
+            method: "POST",
+            body: JSON.stringify({
+                type: "m.login.password",
+                identifier: { type: "m.id.user", user: "pvcheck" },
+                password: "testpass123",
+            }),
+        })
+    ).json();
+    const benKey = encodeURIComponent("jam/@pvben:localhost:8448");
+    const ended = await fetch(
+        `${HS}/_matrix/client/v3/rooms/${encodeURIComponent(setup.rooms.jams)}/state/io.github.bensiebert04.mosaix.jam/${benKey}`,
+        {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${checkerToken}` },
+            body: JSON.stringify({ status: "ended", ended_reason: "ended" }),
+        },
+    );
+    assert.ok(ended.ok, "the checking service may correct Ben's entry");
+    await benCard.waitFor({ state: "detached", timeout: 15000 });
+    await roomList().getByText("🎵 Jams", { exact: true }).waitFor({ timeout: 15000 });
+    log("OK jam channel: running Jam with join link, own Jam shared and ended, live count in the list, checking service ends Jams");
 
     // Managed text room: no call buttons at all, history preserved
     await openRoom(setup.rooms.general_text);
