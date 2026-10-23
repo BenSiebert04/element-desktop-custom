@@ -42,11 +42,32 @@ weiterhin das iframe-Widget, und dieses passen wir an.
   [Element Web](#element-web)). Der Ordner `widgets/element-call/` wird
   danach durch unseren Element-Call-Build ersetzt und eine eigene
   `config.json` hinzugefügt.
-- **Element Desktop** wird aus dem offiziellen Tag gebaut, mit einer einzigen
-  kleinen Änderung (`element-web/patches-desktop/`, von
-  `scripts/prepare-desktop.mjs` angewendet): Fordert der Anruf beim
-  Bildschirm-Teilen Ton an, gibt Mosaix unter Windows den Systemton mit
-  (Electron `audio: "loopback"`).
+- **Element Desktop** wird aus dem offiziellen Tag gebaut, mit einer kleinen
+  Änderung (`element-web/patches-desktop/`, von `scripts/prepare-desktop.mjs`
+  angewendet): Fordert der Anruf beim Bildschirm-Teilen Ton an, fügt Mosaix
+  unter Windows den passenden Ton hinzu (siehe unten, App-Ton).
+
+## App-Ton beim Bildschirm-Teilen (Windows)
+
+Electron kann einer Bildschirmfreigabe nur den kompletten Systemton
+(`loopback`) oder den Ton eines eigenen WebContents hinzufügen. Daher
+`desktop/app-audio/`:
+
+- **Natives Modul** (`src/app_audio.cc`, N-API): nimmt per Windows *Process
+  Loopback* (ab Windows 10 2004) den Ton eines Prozessbaums auf –
+  `include` (nur diese Anwendung) oder `exclude` (alles außer ihr).
+- **`lib/index.cjs`**: Fenster geteilt → `include` mit dem Prozess des
+  Fensters; Bildschirm geteilt → `exclude` mit Mosaix selbst; Mosaix-Fenster
+  → kein Ton. Die Aufnahme wird in einem unsichtbaren Player-Fenster
+  abgespielt (AudioWorklet mit kleinem Puffer), und genau dieses Fenster gibt
+  Electron als Tonquelle der Freigabe an (`audio: webFrameMain`). Während es
+  aufgenommen wird, ist es lokal stumm.
+- **Ende:** Element Call meldet das Ende der Freigabe über die IPC-Brücke von
+  Element Web (`mosaixScreenShareStopped`); zusätzlich endet die Aufnahme,
+  sobald das Player-Fenster nicht mehr aufgenommen wird oder der Anruf weg
+  ist.
+- Ohne Process Loopback (älteres Windows) bleibt der komplette Systemton.
+- Ausgeliefert als `resources/app-audio` (außerhalb von `app.asar`).
   Branding (Name, App-ID, Protokoll, Icon) erfolgt über den vorgesehenen
   Mechanismus „Variant“ (`VARIANT_PATH`) und zusätzliche Dateien. Die
   Windows-Paketierung überschreibt nur die `win`/`nsis`-Einstellungen in einer
