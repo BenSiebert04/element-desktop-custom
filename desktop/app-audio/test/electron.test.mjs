@@ -24,16 +24,20 @@ test("screen share sound in Electron", { skip: !windows, timeout: 120000 }, () =
     assert.equal(r.error, undefined);
     assert.equal(r.supported, true);
 
+    // The captured level of a tone varies between runs (0.03 to 0.1), while
+    // sound that must not be captured measures 0: "heard" means clearly above
+    // silence, "not heard" at most a tenth of what is heard.
+    const HEARD = 0.01;
+
     // Sharing the window of the 440 Hz app: only its sound
     assert.equal(r.window.audioTrack, true);
-    assert.ok(r.window.t440 > 0.05, "the shared app is heard");
+    assert.ok(r.window.t440 > HEARD, "the shared app is heard");
     assert.ok(r.window.t880 < r.window.t440 / 10, "another app is not");
     assert.ok(r.window.t660 < r.window.t440 / 10, "the call (this app) is not");
 
-    // Sharing the screen: every app, but not this one. The level of the
-    // system mix varies between runs (0.04 to 0.1), so only clearly audible.
+    // Sharing the screen: every app, but not this one
     assert.equal(r.screen.audioTrack, true);
-    assert.ok(r.screen.t440 > 0.01 && r.screen.t880 > 0.01, "all other apps are heard");
+    assert.ok(r.screen.t440 > HEARD && r.screen.t880 > HEARD, "all other apps are heard");
     assert.ok(r.screen.t660 < Math.min(r.screen.t440, r.screen.t880) / 10, "the call is not heard twice");
 
     // The capture ends with the screen share
