@@ -27,7 +27,8 @@ export const MANAGED_SECTION_TAG_PREFIX = "element.io.section.pvb.";
 const MAX_NAME_LENGTH = 255;
 const MAX_ID_LENGTH = 512;
 
-export type RoomKind = "text" | "voice";
+/** "jam": a channel where members share their running Spotify Jams. */
+export type RoomKind = "text" | "voice" | "jam";
 export type BridgedMedium = "audio" | "text";
 
 export interface PrivateVoiceCategory {
@@ -188,7 +189,7 @@ export function parsePrivateVoiceConfig(content: unknown, ownUserId: string): Pa
                 !isObject(raw) ||
                 !isRoomId(raw.room_id) ||
                 !isName(raw.name) ||
-                (raw.kind !== "text" && raw.kind !== "voice") ||
+                (raw.kind !== "text" && raw.kind !== "voice" && raw.kind !== "jam") ||
                 !(raw.category_id === null || isRoomId(raw.category_id)) ||
                 typeof raw.matrix_only !== "boolean" ||
                 media === null ||

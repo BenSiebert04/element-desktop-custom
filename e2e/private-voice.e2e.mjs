@@ -133,12 +133,40 @@ try {
     assert.ok(order.every((i) => i >= 0), "all four categories are sections");
     assert.deepEqual([...order].sort((a, b) => a - b), order, "categories in manifest order");
     for (const r of manifest.spaces[0].rooms) {
-        assert.equal(await roomList().getByText(r.name, { exact: true }).count(), 1, `${r.name} listed once`);
+        // The jam channel's name also shows the number of running Jams
+        const name = r.kind === "jam" ? `${r.name} · ♪ 1 live` : r.name;
+        assert.equal(await roomList().getByText(name, { exact: true }).count(), 1, `${r.name} listed once`);
     }
     await page.screenshot({ path: path.join(RESULTS, "private-voice-1-categories.png") });
     log("OK four categories applied live, each room listed once with its configured name");
 
+    // Jam channel: Ben's running Jam with a join button, sharing and ending one's own
+    assert.equal(await roomList().getByText("🎵 Jams · ♪ 1 live", { exact: true }).count(), 1, "jam count in the list");
+    await openRoom(setup.rooms.jams);
+    const panel = page.getByTestId("jam-panel");
+    await panel.waitFor({ timeout: 15000 });
+    const benCard = panel.locator('[data-testid="jam-card"]').filter({ hasText: "Bens Abendmix" });
+    await assert.doesNotReject(benCard.getByText("7 minutes").waitFor({ timeout: 5000 }));
+    assert.equal(
+        await benCard.getByTestId("jam-join").getAttribute("href"),
+        "https://open.spotify.com/socialsession/BenJam42",
+    );
+    assert.deepEqual(await headerCallButtons(), [], "no calls in the jam channel");
+    await panel.getByTestId("jam-share").click();
+    await panel.getByTestId("jam-link").fill("https://example.org/not-a-jam");
+    assert.equal(await panel.getByTestId("jam-share-submit").getAttribute("aria-disabled"), "true");
+    await panel.getByTestId("jam-link").fill("https://open.spotify.com/socialsession/AnnaJam7");
+    await panel.getByTestId("jam-title").fill("Annas Playlist");
+    await panel.getByTestId("jam-share-submit").click();
+    await panel.locator('[data-testid="jam-card"]').filter({ hasText: "Annas Playlist" }).waitFor({ timeout: 15000 });
+    await roomList().getByText("🎵 Jams · ♪ 2 live", { exact: true }).waitFor({ timeout: 15000 });
+    await page.screenshot({ path: path.join(RESULTS, "private-voice-6-jams.png") });
+    await panel.getByTestId("jam-end").click();
+    await panel.locator('[data-testid="jam-card"]').filter({ hasText: "Annas Playlist" }).waitFor({ state: "detached", timeout: 15000 });
+    log("OK jam channel: running Jam with join link, own Jam shared and ended, live count in the list");
+
     // Managed text room: no call buttons at all, history preserved
+    await openRoom(setup.rooms.general_text);
     assert.deepEqual(await headerCallButtons(), [], "no call buttons in a managed text room");
     assert.equal(await header().locator("button[disabled], button[aria-disabled='true']").count(), 0);
     await page.getByText("Nachricht vor der Konfiguration").waitFor({ timeout: 15000 });

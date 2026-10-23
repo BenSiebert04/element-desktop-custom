@@ -116,6 +116,7 @@ jobs:
                   src/stores/room-list-v3
                   src/viewmodels/room-list
                   src/components/views/rooms/RoomHeader
+                  src/components/structures/RoomView.test.tsx
                   src/stores/RoomViewStore.test.ts
                   src/models/Call.test.ts
 

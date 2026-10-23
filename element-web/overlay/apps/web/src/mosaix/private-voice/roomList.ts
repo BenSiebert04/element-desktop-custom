@@ -18,6 +18,8 @@ Please see LICENSE in the repository root for full details.
 import { type Room } from "matrix-js-sdk/src/matrix";
 
 import { MANAGED_SECTION_TAG_PREFIX } from "./parser";
+import { _t } from "../../languageHandler";
+import { activeJams } from "../jam/jam";
 import { PrivateVoiceStore } from "./PrivateVoiceStore";
 
 /** The tag of the "Chats"/"Rooms" section, see room-list-v3/section.ts. */
@@ -102,5 +104,11 @@ export function getManagedSectionTitle(tag: string, customName: string | undefin
 
 /** The name to show for a room in the room list. */
 export function getManagedRoomName(room: Room): string {
-    return PrivateVoiceStore.instance.getRoom(room.roomId)?.name || room.name;
+    const managed = PrivateVoiceStore.instance.getRoom(room.roomId);
+    // A jam channel shows how many Jams are running
+    if (managed?.kind === "jam") {
+        const count = activeJams(room).length;
+        return count > 0 ? `${managed.name} · ${_t("mosaix|jam|running_short", { count })}` : managed.name;
+    }
+    return managed?.name || room.name;
 }

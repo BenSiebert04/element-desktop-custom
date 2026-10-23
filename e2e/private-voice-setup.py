@@ -84,6 +84,20 @@ for key, name, kind, cat, matrix_only, media, enc in [
     rooms[key] = {"room_id": rid, "name": name, "kind": kind, "category_id": categories[cat][0],
                   "matrix_only": matrix_only, "bridged_media": media, "expected_matrix_encryption": enc}
 
+# Jam channel: members may share their Spotify Jam (state event per member)
+JAM_TYPE = "io.github.bensiebert04.mosaix.jam"
+jam_room = req("POST", "/_matrix/client/v3/createRoom", {
+    "name": "matrix-jams", "preset": "private_chat", "invite": ["@pvben:" + SERVER],
+    "power_level_content_override": {"events": {**CALL_PL["events"], JAM_TYPE: 0}}}, anna)["room_id"]
+req("POST", f"/_matrix/client/v3/rooms/{urllib.parse.quote(jam_room)}/join", {}, ben)
+add_child(categories["general"][0], jam_room)
+rooms["jams"] = {"room_id": jam_room, "name": "🎵 Jams", "kind": "jam", "category_id": categories["general"][0],
+                 "matrix_only": True, "bridged_media": [], "expected_matrix_encryption": "none"}
+# Ben is running a Jam
+req("PUT", f"/_matrix/client/v3/rooms/{urllib.parse.quote(jam_room)}/state/{JAM_TYPE}/{urllib.parse.quote('@pvben:' + SERVER)}",
+    {"url": "https://open.spotify.com/socialsession/BenJam42", "title": "Bens Abendmix",
+     "started_ts": int(time.time() * 1000) - 7 * 60000, "status": "active"}, ben)
+
 lobby = create("Unverwaltete Lobby", invite=["@pvben:" + SERVER])
 add_child(space, lobby)
 send(rooms["general_text"]["room_id"], "Nachricht vor der Konfiguration")

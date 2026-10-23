@@ -22,7 +22,8 @@
 | End-to-End | `e2e/element-web.e2e.mjs` | nein (lokal, Linux) | ausgelieferte Webapp (Element Web + unser Widget), verschlüsselter Raum, Nachricht, Anruf aus der Raum-Kopfzeile |
 | Private Voice | `element-web/overlay/apps/web/src/mosaix/private-voice/*.test.ts(x)` | ja | Parser (fehlend, ungültig, neuere Version, falsche user_id, unbekannte Felder, Unicode, Kategorie `null`, Duplikate, Room-IDs ohne Doppelpunkt), Store (initial + live, gleiche Revision, Kontowechsel/Abmeldung, Offline-Cache als „stale“, Entfernen nach erfolgreichem Sync, Homeserver-Beschränkung), Raumliste (Kategorien, Reihenfolge, keine Duplikate, Favoriten/eigene Abschnitte bleiben), Kopfzeile (keine Anruf-Buttons im Textraum, DM unverändert, Brücken-Kennzeichnung) |
 | Upstream Element Web | Tests der geänderten Bereiche (Raumliste v3, Raumlisten-ViewModels, RoomHeader, RoomViewStore, Call) | ja | Regressionstest plus zusätzliche `[mosaix]`-Tests |
-| End-to-End | `e2e/private-voice.e2e.mjs` | nein (lokal, Linux) | gerenderte Element-Web-App: vier Kategorien live, Textraum ohne Anruf-Buttons mit Verlauf, Sprachraum-Lobby + Kamera + Bildschirmfreigabe, DM mit Anruf-Buttons, Entfernen |
+| Jam-Kanal | `element-web/overlay/…/mosaix/jam/jam.test.tsx` | ja | nur Spotify-Jam-Links (keine fremden Domains, kein `javascript:`), Titel als Text, beendete/fremde/ungültige Einträge und Nicht-Mitglieder ausgeblendet, Live-Aktualisierung, Teilen/Beenden, Zähler in der Raumliste |
+| End-to-End | `e2e/private-voice.e2e.mjs` | nein (lokal, Linux) | gerenderte Element-Web-App: vier Kategorien live, Jam-Kanal (laufender Jam mit Beitreten-Link, eigenen Jam teilen und beenden, „♪ n live“), Textraum ohne Anruf-Buttons mit Verlauf, Sprachraum-Lobby + Kamera + Bildschirmfreigabe, DM mit Anruf-Buttons, Entfernen |
 
 Zusätzlich wurde der fertige Windows-Build aus CI heruntergeladen und geprüft:
 `webapp.asar` enthält das angepasste Element Call, `config.json` hat kein
