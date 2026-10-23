@@ -47,7 +47,7 @@ function fakeWindow(): Window & { close: ReturnType<typeof vi.fn> } {
     innerWidth: 400,
     innerHeight: 225,
     close: vi.fn(() => {
-      win.closed = true;
+      Object.assign(win, { closed: true });
     }),
     addEventListener: events.addEventListener.bind(events),
     removeEventListener: events.removeEventListener.bind(events),
@@ -181,7 +181,7 @@ describe("PopoutWindow", () => {
     setup(s, win);
     expect(popouts.open$.value).toEqual([s.key]);
     act(() => {
-      win.closed = true;
+      Object.assign(win, { closed: true });
       win.dispatchEvent(new Event("pagehide"));
     });
     expect(popouts.open$.value).toEqual([]);
