@@ -14,18 +14,47 @@ Please see LICENSE in the repository root for full details.
 export function notifyDesktopScreenShareStopped(
   top: Window | null = window.top,
 ): void {
+  callDesktop(top, "mosaixScreenShareStopped", []);
+}
+
+type Send = (channel: string, payload: unknown) => void;
+
+function desktopSend(top: Window | null): Send | null {
   try {
-    const bridge = (
-      top as unknown as {
-        electron?: { send?: (channel: string, payload: unknown) => void };
-      } | null
-    )?.electron;
-    bridge?.send?.("ipcCall", {
-      id: -1,
-      name: "mosaixScreenShareStopped",
-      args: [],
-    });
+    const send = (top as unknown as { electron?: { send?: unknown } } | null)
+      ?.electron?.send;
+    return typeof send === "function" ? (send as Send) : null;
   } catch {
     // A parent of another origin: not the desktop app
+    return null;
   }
+}
+
+function callDesktop(top: Window | null, name: string, args: unknown[]): void {
+  try {
+    desktopSend(top)?.call(
+      (top as unknown as { electron: unknown }).electron,
+      "ipcCall",
+      { id: -1, name, args },
+    );
+  } catch {
+    // Not the desktop app
+  }
+}
+
+/** Whether Element Call runs in the Mosaix desktop app. */
+export function isDesktopApp(top: Window | null = window.top): boolean {
+  return desktopSend(top) !== null;
+}
+
+/**
+ * Keeps a pop-out window (by its window name) on top of all other windows, or
+ * not. Only the desktop app can do this; elsewhere it does nothing.
+ */
+export function setDesktopPopoutAlwaysOnTop(
+  windowName: string,
+  onTop: boolean,
+  top: Window | null = window.top,
+): void {
+  callDesktop(top, "mosaixPopoutAlwaysOnTop", [windowName, onTop]);
 }

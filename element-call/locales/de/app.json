@@ -81,6 +81,13 @@
     "no_screen_shares": "Niemand teilt gerade den Bildschirm",
     "pin": "Anheften",
     "pinned": "Angeheftet",
+    "popout": {
+      "always_on_top": "Pop-outs immer im Vordergrund",
+      "always_on_top_description": "Hält Pop-outs vor allen anderen Fenstern, auch über Spielen im Fenster- oder randlosen Vollbildmodus.",
+      "close": "Pop-out schließen",
+      "open": "In eigenem Fenster öffnen",
+      "screen_title": "Bildschirm von {{name}}"
+    },
     "preset_auto": "Automatisch (Bildschirmfreigaben groß)",
     "preset_default": "Standardansicht (Element)",
     "preset_four_streams": "Vier Streams",

@@ -182,6 +182,29 @@ CallViewModel ──(alle Kameras, alle Screenshares)──▶ CustomLayoutViewM
 - E2EE, MatrixRTC-Mitgliedschaft und Geräteauswahl bleiben unverändert der
   Upstream-Code.
 
+### Pop-outs
+
+- **`popout.ts`** – welche Streams als eigenes Fenster offen sind (endet mit
+  dem Stream), gemerkte Position/Größe pro Matrix-ID und Art, Einstellung
+  „immer im Vordergrund“ (lokal im Profil).
+- **`Popouts.tsx`** – öffnet pro Pop-out `window.open("", "mosaix-popout-…")`
+  und rendert per React-Portal in dieses Fenster. Inhalt und Tracks bleiben im
+  Element-Call-Dokument; das Fenster zeigt dieselben LiveKit-Tracks
+  (`MediaStream` mit dem `MediaStreamTrack`), es gibt keine zweite
+  Verbindung.
+- **Hintergrund:** LiveKit pausiert bei `adaptiveStream` alle Videos, sobald
+  das Dokument verborgen ist (Fenster minimiert). Ein Pop-out meldet sich bei
+  LiveKit deshalb über `observeElementInfo` als sichtbares
+  Bild-im-Bild-Element in seiner echten Größe; dann läuft genau dieses Video
+  weiter (im E2E-Test gemessen: ohne Pop-out 0 Bytes, mit Pop-out ca.
+  100 KB/s).
+- **Desktop-App** (`apps/desktop/src/popouts.ts` im Desktop-Patch): erlaubt
+  nur leere Fenster (`about:blank`) mit dem Namen `mosaix-popout-…`; sie
+  können weder navigieren noch weitere Fenster öffnen. Ein Pop-out außerhalb
+  aller Bildschirme (Monitor abgesteckt) wird auf den Hauptbildschirm geholt.
+  „Immer im Vordergrund“ kommt per IPC `mosaixPopoutAlwaysOnTop` und setzt
+  `setAlwaysOnTop(…, "screen-saver")`. Im Browser gibt es diese Option nicht.
+
 ### Standardansicht
 
 Das Preset „Standardansicht (Element)“ schaltet das eigene Layout komplett ab;

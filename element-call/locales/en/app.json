@@ -82,6 +82,13 @@
     "no_screen_shares": "Nobody is sharing their screen",
     "pin": "Pin",
     "pinned": "Pinned",
+    "popout": {
+      "always_on_top": "Pop-outs always on top",
+      "always_on_top_description": "Keeps pop-outs in front of all other windows, also over games in windowed or borderless mode.",
+      "close": "Close pop-out",
+      "open": "Pop out",
+      "screen_title": "{{name}}'s screen"
+    },
     "preset_auto": "Automatic (screen shares large)",
     "preset_default": "Standard view (Element)",
     "preset_four_streams": "Four streams",

@@ -56,18 +56,19 @@ index 3ecb63d..e366ae9 100644
          { useSystemPicker: true },
      ); // Use Mac OS 15+ native picker
 diff --git a/apps/desktop/src/ipc.ts b/apps/desktop/src/ipc.ts
-index 2b47b1e..b8be153 100644
+index 2b47b1e..6413d59 100644
 --- a/apps/desktop/src/ipc.ts
 +++ b/apps/desktop/src/ipc.ts
-@@ -10,6 +10,7 @@ import { app, autoUpdater, desktopCapturer, ipcMain, powerSaveBlocker, TouchBar,
+@@ -10,6 +10,8 @@ import { app, autoUpdater, desktopCapturer, ipcMain, powerSaveBlocker, TouchBar,
  import IpcMainEvent = Electron.IpcMainEvent;
  import { randomArray } from "./utils.js";
  import { consumeDisplayMediaCallback } from "./displayMediaCallback.js";
 +import { stopScreenShareAudio } from "./screenShareAudio.js";
++import { setPopoutAlwaysOnTop } from "./popouts.js";
  import Store, { clearData } from "./store.js";
  import { getConfig } from "./config.js";
  
-@@ -167,6 +168,12 @@ ipcMain.on("ipcCall", async function (_ev: IpcMainEvent, payload) {
+@@ -167,6 +169,18 @@ ipcMain.on("ipcCall", async function (_ev: IpcMainEvent, payload) {
                  ret = [];
              }
              break;
@@ -77,9 +78,228 @@ index 2b47b1e..b8be153 100644
 +            ret = null;
 +            break;
 +
++        // [mosaix] Keep a pop-out of Element Call on top of all other windows, or not
++        case "mosaixPopoutAlwaysOnTop":
++            setPopoutAlwaysOnTop(args[0], args[1]);
++            ret = null;
++            break;
++
          case "callDisplayMediaCallback":
              consumeDisplayMediaCallback()?.({ video: args[0] });
              ret = null;
+diff --git a/apps/desktop/src/popouts.test.ts b/apps/desktop/src/popouts.test.ts
+new file mode 100644
+index 0000000..3d5e54b
+--- /dev/null
++++ b/apps/desktop/src/popouts.test.ts
+@@ -0,0 +1,95 @@
++/*
++Copyright 2026 Mosaix contributors.
++
++SPDX-License-Identifier: AGPL-3.0-only
++Please see LICENSE in the repository root for full details.
++*/
++
++import { describe, expect, it, vi } from "vitest";
++import type { BrowserWindow } from "electron";
++
++import { isPopoutRequest, onScreenBounds, registerPopout, setPopoutAlwaysOnTop } from "./popouts.js";
++
++const primary = { x: 0, y: 0, width: 1920, height: 1040 };
++const right = { x: 1920, y: 0, width: 2560, height: 1400 };
++const screen = {
++    getAllDisplays: () => [{ workArea: primary }, { workArea: right }],
++    getPrimaryDisplay: () => ({ workArea: primary }),
++};
++
++function fakeWindow(bounds = { x: 4000, y: 20, width: 480, height: 270 }) {
++    const handlers: Record<string, () => void> = {};
++    const win = {
++        setMenuBarVisibility: vi.fn(),
++        getBounds: () => bounds,
++        setBounds: vi.fn(),
++        setAlwaysOnTop: vi.fn(),
++        isDestroyed: () => false,
++        on: vi.fn((ev: string, cb: () => void) => {
++            handlers[ev] = cb;
++        }),
++        webContents: { on: vi.fn(), setWindowOpenHandler: vi.fn() },
++        handlers,
++    };
++    return win;
++}
++
++describe("pop-outs", () => {
++    it("only accepts empty windows named like a pop-out", () => {
++        expect(isPopoutRequest({ url: "about:blank", frameName: "mosaix-popout-abc_1-ff" })).toBe(true);
++        expect(isPopoutRequest({ url: "about:blank#x", frameName: "mosaix-popout-abc" })).toBe(false);
++        expect(isPopoutRequest({ url: "vector://vector/webapp/", frameName: "mosaix-popout-abc" })).toBe(false);
++        expect(isPopoutRequest({ url: "about:blank", frameName: "mosaix-popout-" })).toBe(false);
++        expect(isPopoutRequest({ url: "about:blank", frameName: "mosaix-popout-a b" })).toBe(false);
++        expect(isPopoutRequest({ url: "about:blank", frameName: "_blank" })).toBe(false);
++    });
++
++    it("keeps a pop-out where it was if that is on a screen", () => {
++        const onRight = { x: 4000, y: 20, width: 480, height: 270 };
++        expect(onScreenBounds(onRight, [primary, right], primary)).toBe(onRight);
++    });
++
++    it("moves a pop-out of a missing monitor onto the primary screen", () => {
++        const gone = { x: -2500, y: 100, width: 480, height: 270 };
++        expect(onScreenBounds(gone, [primary], primary)).toEqual({ x: 720, y: 385, width: 480, height: 270 });
++        // Barely visible counts as gone, and it is shrunk to fit
++        expect(onScreenBounds({ x: 1900, y: 0, width: 5000, height: 2000 }, [primary], primary)).toEqual(primary);
++    });
++
++    it("keeps a pop-out on top on request, also when asked before it exists", () => {
++        setPopoutAlwaysOnTop("mosaix-popout-early", true);
++        const early = fakeWindow();
++        registerPopout(early as unknown as BrowserWindow, "mosaix-popout-early", screen);
++        expect(early.setAlwaysOnTop).toHaveBeenCalledWith(true, "screen-saver");
++
++        const win = fakeWindow({ x: -3000, y: 0, width: 480, height: 270 });
++        registerPopout(win as unknown as BrowserWindow, "mosaix-popout-later", screen);
++        expect(win.setBounds).toHaveBeenCalledWith({ x: 720, y: 385, width: 480, height: 270 });
++        expect(win.setAlwaysOnTop).not.toHaveBeenCalled();
++        setPopoutAlwaysOnTop("mosaix-popout-later", true);
++        setPopoutAlwaysOnTop("mosaix-popout-later", false);
++        expect(win.setAlwaysOnTop.mock.calls).toEqual([
++            [true, "screen-saver"],
++            [false, "screen-saver"],
++        ]);
++        // Nonsense from the renderer is ignored
++        setPopoutAlwaysOnTop("other-window", true);
++        setPopoutAlwaysOnTop("mosaix-popout-later", "yes");
++        expect(win.setAlwaysOnTop).toHaveBeenCalledTimes(2);
++    });
++
++    it("lets a pop-out neither navigate nor open windows, and forgets it when closed", () => {
++        const win = fakeWindow();
++        registerPopout(win as unknown as BrowserWindow, "mosaix-popout-gone", screen);
++        expect(win.setMenuBarVisibility).toHaveBeenCalledWith(false);
++        const [event, onNavigate] = win.webContents.on.mock.calls[0];
++        expect(event).toBe("will-navigate");
++        const navigation = { preventDefault: vi.fn() };
++        onNavigate(navigation);
++        expect(navigation.preventDefault).toHaveBeenCalled();
++        expect(win.webContents.setWindowOpenHandler.mock.calls[0][0]()).toEqual({ action: "deny" });
++        win.handlers.closed();
++        setPopoutAlwaysOnTop("mosaix-popout-gone", true);
++        expect(win.setAlwaysOnTop).not.toHaveBeenCalled();
++    });
++});
+diff --git a/apps/desktop/src/popouts.ts b/apps/desktop/src/popouts.ts
+new file mode 100644
+index 0000000..0ed49a1
+--- /dev/null
++++ b/apps/desktop/src/popouts.ts
+@@ -0,0 +1,106 @@
++/*
++Copyright 2026 Mosaix contributors.
++
++SPDX-License-Identifier: AGPL-3.0-only
++Please see LICENSE in the repository root for full details.
++*/
++
++// [mosaix] Pop-outs: Element Call shows a camera or screen share in a window
++// of its own (`window.open("", "mosaix-popout-…")`, filled by Element Call
++// itself). Only such empty windows with that name are allowed; they cannot
++// navigate or open further windows. On request they stay on top of all other
++// windows (also over games in windowed or borderless mode).
++
++import type { BrowserWindow, BrowserWindowConstructorOptions, Rectangle } from "electron";
++
++const POPOUT_NAME = /^mosaix-popout-[A-Za-z0-9_-]{1,80}$/;
++
++/** How much of a pop-out must be on a screen; otherwise it is moved back. */
++const MIN_VISIBLE = 48;
++
++export const POPOUT_WINDOW_OPTIONS: BrowserWindowConstructorOptions = {
++    autoHideMenuBar: true,
++    backgroundColor: "#000000",
++    minWidth: 160,
++    minHeight: 90,
++    webPreferences: {
++        // Keep playing while another window (a game) covers it
++        backgroundThrottling: false,
++    },
++};
++
++/** Whether a `window.open` request is one of Element Call's pop-outs. */
++export function isPopoutRequest(details: { url: string; frameName: string }): boolean {
++    return details.url === "about:blank" && POPOUT_NAME.test(details.frameName);
++}
++
++const windows = new Map<string, BrowserWindow>();
++/** Requested before the window existed, or for later windows of that name. */
++const wantedOnTop = new Map<string, boolean>();
++
++function applyOnTop(win: BrowserWindow, onTop: boolean): void {
++    // "screen-saver" is the highest level: above full-screen windows too
++    win.setAlwaysOnTop(onTop, "screen-saver");
++}
++
++/** Keeps a pop-out on top of all other windows, or not. */
++export function setPopoutAlwaysOnTop(name: unknown, onTop: unknown): void {
++    if (typeof name !== "string" || !POPOUT_NAME.test(name) || typeof onTop !== "boolean") return;
++    wantedOnTop.set(name, onTop);
++    const win = windows.get(name);
++    if (win && !win.isDestroyed()) applyOnTop(win, onTop);
++}
++
++function visibleArea(a: Rectangle, b: Rectangle): { width: number; height: number } {
++    return {
++        width: Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x),
++        height: Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y),
++    };
++}
++
++/**
++ * The bounds of a pop-out, moved onto the primary screen if it would not be
++ * visible (e.g. its remembered monitor is gone).
++ */
++export function onScreenBounds(bounds: Rectangle, workAreas: Rectangle[], primary: Rectangle): Rectangle {
++    const visible = workAreas.some((area) => {
++        const { width, height } = visibleArea(bounds, area);
++        return width >= MIN_VISIBLE && height >= MIN_VISIBLE;
++    });
++    if (visible) return bounds;
++    const width = Math.min(bounds.width, primary.width);
++    const height = Math.min(bounds.height, primary.height);
++    return {
++        x: Math.round(primary.x + (primary.width - width) / 2),
++        y: Math.round(primary.y + (primary.height - height) / 2),
++        width,
++        height,
++    };
++}
++
++interface Screen {
++    getAllDisplays(): { workArea: Rectangle }[];
++    getPrimaryDisplay(): { workArea: Rectangle };
++}
++
++/** Sets up a pop-out window that Electron just created. */
++export function registerPopout(win: BrowserWindow, name: string, screen: Screen): void {
++    windows.set(name, win);
++    win.setMenuBarVisibility(false);
++    const bounds = win.getBounds();
++    const fixed = onScreenBounds(
++        bounds,
++        screen.getAllDisplays().map((d) => d.workArea),
++        screen.getPrimaryDisplay().workArea,
++    );
++    if (fixed !== bounds) win.setBounds(fixed);
++    const onTop = wantedOnTop.get(name);
++    if (onTop !== undefined) applyOnTop(win, onTop);
++
++    // Element Call fills the window; it never shows anything else
++    win.webContents.on("will-navigate", (event) => event.preventDefault());
++    win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
++    win.on("closed", () => {
++        if (windows.get(name) === win) windows.delete(name);
++    });
++}
 diff --git a/apps/desktop/src/screenShareAudio.test.ts b/apps/desktop/src/screenShareAudio.test.ts
 new file mode 100644
 index 0000000..4515672
@@ -242,3 +462,98 @@ index 0000000..c51de55
 +    // Windows before 10 2004: only the whole system's sound is possible
 +    return { ...streams, audio: "loopback" };
 +}
+diff --git a/apps/desktop/src/webcontents-handler.test.ts b/apps/desktop/src/webcontents-handler.test.ts
+index e629352..ceec02b 100644
+--- a/apps/desktop/src/webcontents-handler.test.ts
++++ b/apps/desktop/src/webcontents-handler.test.ts
+@@ -46,6 +46,10 @@ vi.mock("electron", () => ({
+         }
+     },
+     shell: { openExternal: vi.fn(), openPath: vi.fn() },
++    screen: {
++        getAllDisplays: () => [{ workArea: { x: 0, y: 0, width: 1920, height: 1040 } }],
++        getPrimaryDisplay: () => ({ workArea: { x: 0, y: 0, width: 1920, height: 1040 } }),
++    },
+     dialog: { showMessageBox: vi.fn(), showSaveDialog: vi.fn() },
+     ipcMain: {
+         on: vi.fn((channel: string, cb: (...args: unknown[]) => unknown) => {
+@@ -222,3 +226,44 @@ describe("save dialog filters", () => {
+         );
+     });
+ });
++
++// [mosaix]
++describe("Element Call pop-outs", () => {
++    const openHandler = (): ((details: { url: string; frameName: string }) => unknown) => {
++        const webContents = makeWebContents();
++        registerWebContentsHandlers(webContents as unknown as WebContents);
++        return webContents.setWindowOpenHandler.mock.calls[0][0];
++    };
++
++    it("allows Element Call's empty pop-out windows", () => {
++        expect(openHandler()({ url: "about:blank", frameName: "mosaix-popout-_alice_example_org-1a2b" })).toEqual({
++            action: "allow",
++            overrideBrowserWindowOptions: expect.objectContaining({ autoHideMenuBar: true }),
++        });
++    });
++
++    it("opens nothing else in a window of the app", () => {
++        const handler = openHandler();
++        expect(handler({ url: "https://example.org/", frameName: "mosaix-popout-x" })).toEqual({ action: "deny" });
++        expect(handler({ url: "about:blank", frameName: "other" })).toEqual({ action: "deny" });
++        expect(handler({ url: "about:blank", frameName: "mosaix-popout-../x" })).toEqual({ action: "deny" });
++    });
++
++    it("sets up a created pop-out window", () => {
++        const webContents = makeWebContents();
++        registerWebContentsHandlers(webContents as unknown as WebContents);
++        const win = {
++            setMenuBarVisibility: vi.fn(),
++            getBounds: () => ({ x: 100, y: 100, width: 480, height: 270 }),
++            setBounds: vi.fn(),
++            setAlwaysOnTop: vi.fn(),
++            isDestroyed: () => false,
++            on: vi.fn(),
++            webContents: { on: vi.fn(), setWindowOpenHandler: vi.fn() },
++        };
++        webContents.handlers["did-create-window"](win, { url: "about:blank", frameName: "mosaix-popout-a-1" });
++        expect(win.setMenuBarVisibility).toHaveBeenCalledWith(false);
++        expect(win.setBounds).not.toHaveBeenCalled();
++        expect(win.webContents.on).toHaveBeenCalledWith("will-navigate", expect.any(Function));
++    });
++});
+diff --git a/apps/desktop/src/webcontents-handler.ts b/apps/desktop/src/webcontents-handler.ts
+index 28c5221..56d95cb 100644
+--- a/apps/desktop/src/webcontents-handler.ts
++++ b/apps/desktop/src/webcontents-handler.ts
+@@ -12,6 +12,7 @@ import {
+     shell,
+     dialog,
+     ipcMain,
++    screen,
+     type WebContents,
+     type ContextMenuParams,
+     type DownloadItem,
+@@ -26,6 +27,7 @@ import path from "node:path";
+ import { _t } from "./language-helper.js";
+ import { saveImageToFile } from "./save-image.js";
+ import { getConfig } from "./config.js";
++import { isPopoutRequest, POPOUT_WINDOW_OPTIONS, registerPopout } from "./popouts.js";
+ 
+ const MAILTO_PREFIX = "mailto:";
+ 
+@@ -286,9 +288,14 @@ ipcMain.on("userDownloadAction", async function (ev: IpcMainEvent, { id, open =
+ 
+ export default (webContents: WebContents): void => {
+     webContents.setWindowOpenHandler((details) => {
++        // [mosaix] Element Call's pop-outs (a camera or screen share in a window of its own)
++        if (isPopoutRequest(details)) return { action: "allow", overrideBrowserWindowOptions: POPOUT_WINDOW_OPTIONS };
+         safeOpenURL(details.url);
+         return { action: "deny" };
+     });
++    webContents.on("did-create-window", (win, details) => {
++        if (isPopoutRequest(details)) registerPopout(win, details.frameName, screen);
++    });
+ 
+     webContents.on("will-navigate", (ev: Event, target: string): void => {
+         if (target.startsWith("vector://")) return;

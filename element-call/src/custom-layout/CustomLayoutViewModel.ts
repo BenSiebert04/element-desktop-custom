@@ -35,6 +35,12 @@ import {
 } from "./layoutConfig";
 import { type LayoutStorage, type SavedLayout } from "./layoutStorage";
 import {
+  createPopoutViewModel,
+  defaultPopoutStorage,
+  type PopoutStorage,
+  type PopoutViewModel,
+} from "./popout";
+import {
   completeFreeRects,
   computeLayout,
   type Size,
@@ -63,6 +69,8 @@ export interface CustomLayoutViewModel {
   panelOpen$: Behavior<boolean>;
   savedLayouts$: Behavior<SavedLayout[]>;
   hasGlobalDefault$: Behavior<boolean>;
+  /** Streams shown in windows of their own. */
+  popouts: PopoutViewModel;
 
   setPanelOpen: (open: boolean) => void;
   /**
@@ -106,6 +114,7 @@ export interface CustomLayoutInputs {
   storage: LayoutStorage;
   userMedia$: Behavior<UserMediaViewModel[]>;
   screenShares$: Behavior<ScreenShareViewModel[]>;
+  popoutStorage?: PopoutStorage;
 }
 
 function streamsEqual(a: CustomStream[], b: CustomStream[]): boolean {
@@ -126,7 +135,13 @@ function withoutKey<T>(
 
 export function createCustomLayoutViewModel(
   scope: ObservableScope,
-  { roomId, storage, userMedia$, screenShares$ }: CustomLayoutInputs,
+  {
+    roomId,
+    storage,
+    userMedia$,
+    screenShares$,
+    popoutStorage = defaultPopoutStorage(),
+  }: CustomLayoutInputs,
 ): CustomLayoutViewModel {
   const config$ = new BehaviorSubject<CustomLayoutConfig>(
     storage.loadInitial(roomId) ?? defaultConfig(),
@@ -222,6 +237,7 @@ export function createCustomLayoutViewModel(
     panelOpen$,
     savedLayouts$,
     hasGlobalDefault$,
+    popouts: createPopoutViewModel(scope, streams$, popoutStorage),
 
     setPanelOpen: (open) => panelOpen$.next(open),
     setPreset,

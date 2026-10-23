@@ -59,6 +59,17 @@ außerdem **In den Vordergrund / In den Hintergrund** und **Ebene** (0–9): Ein
 Kachel auf einer höheren Ebene liegt immer vor Kacheln niedrigerer Ebenen.
 Auch in der Standardansicht öffnet das Rechtsklick-Menü „Layout anpassen“.
 
+**Pop-out** (Rechtsklick → „In eigenem Fenster öffnen“, auch in der
+Standardansicht): Eine Kamera oder Bildschirmfreigabe bekommt ein eigenes
+Fenster, das sich frei verschieben lässt, z. B. eine Kamera oben rechts auf
+den rechten Monitor und eine Freigabe auf den linken. Position und Größe
+merkt sich Mosaix pro Person und Art (Kamera/Bildschirm). Mit
+**„Pop-outs immer im Vordergrund“** (Rechtsklick-Menü oder Knopf im Pop-out)
+bleiben sie vor allen anderen Fenstern, auch über Spielen im Fenster- oder
+randlosen Vollbildmodus. Exklusiver Vollbildmodus eines Spiels lässt sich
+von keinem normalen Fenster überdecken. Pop-outs laufen weiter, wenn das
+Mosaix-Fenster minimiert ist.
+
 **Lautstärke pro Person: 0–200 %** (Rechtsklick auf die Kachel), für Stimme
 und Bildschirmton getrennt. Der Wert wird pro Matrix-ID gespeichert und gilt
 in jedem späteren Anruf mit dieser Person wieder.
