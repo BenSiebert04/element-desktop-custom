@@ -87,14 +87,12 @@ test("rejects bad arguments", { skip: !windows }, () => {
     assert.throws(() => new native.Capture(1, "both", () => {}, () => {}));
 });
 
-// Measured, not asserted: excluding a process that plays with PlaySound
-// (winmm) did not remove its sound on the Windows CI runner, while including
-// it captured exactly its sound. Mosaix only ever excludes itself (Electron),
-// which the Electron test checks.
-test("PlaySound process (measured only)", { skip: !windows }, async () => {
+// A process playing with Windows' PlaySound (winmm), measured and checked
+// like the applications above.
+test("PlaySound process: include and exclude", { skip: !windows }, async () => {
     const dir = mkdtempSync(path.join(tmpdir(), "app-audio-"));
-    const file = path.join(dir, "tone-660.wav");
-    writeToneWav(file, 660);
+    const file = path.join(dir, "tone-1000.wav");
+    writeToneWav(file, 1000);
     soundPlayer = playLooped(file);
     await sleep(3000);
     const chunks = [];
@@ -103,6 +101,9 @@ test("PlaySound process (measured only)", { skip: !windows }, async () => {
         await sleep(2500);
         capture.stop();
         const signal = leftChannel(chunks.filter(([m]) => m === mode).map(([, c]) => c)).subarray(24000);
-        console.log(`PlaySound ${mode}: 660 Hz level`, toneLevel(signal, 660));
+        const level = toneLevel(signal, 1000);
+        console.log(`PlaySound ${mode}: 1000 Hz level`, level);
+        if (mode === "include") assert.ok(level > 0.05, "its sound is captured");
+        else assert.ok(level < 0.005, "its sound is left out");
     }
 });

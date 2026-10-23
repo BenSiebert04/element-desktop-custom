@@ -7,7 +7,7 @@
     "main": "lib/index.cjs",
     "scripts": {
         "build": "node-gyp rebuild",
-        "test": "node --test test/*.test.mjs"
+        "test": "node --test --test-concurrency=1 test/*.test.mjs"
     },
     "dependencies": {
         "node-addon-api": "8.5.0"
