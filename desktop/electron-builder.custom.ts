@@ -23,6 +23,10 @@ const config = {
     // No update feed at all: Mosaix must never be replaced by an
     // official Element release (this also avoids an app-update.yml)
     publish: null,
+    // Sound for screen sharing (desktop/app-audio), copied here by
+    // scripts/prepare-desktop.mjs --app-audio; outside app.asar because of the
+    // native module
+    extraResources: [...(upstream.extraResources ?? []), { from: "app-audio", to: "app-audio" }],
     win: {
         ...upstream.win,
         target: ["nsis", "zip"],

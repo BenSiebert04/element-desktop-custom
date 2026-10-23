@@ -99,7 +99,7 @@
     "screen": "Bildschirm",
     "screen_share_mode": {
       "audio": "Ton mitübertragen",
-      "audio_description": "In der Desktop-App unter Windows ist das der Ton des ganzen Computers (eine einzelne Anwendung lässt sich nicht wählen). Gilt ab der nächsten Freigabe.",
+      "audio_description": "Desktop-App unter Windows: Beim Teilen eines Fensters wird nur der Ton dieser Anwendung übertragen, beim Teilen des Bildschirms der Ton des Computers ohne diesen Anruf. Gilt ab der nächsten Freigabe.",
       "readability": "Lesbarkeit",
       "readability_description": "Volle Bildschirmauflösung zuerst, die Bildrate sinkt bei Bedarf. Ideal für Text und Code.",
       "speed": "Highspeed",

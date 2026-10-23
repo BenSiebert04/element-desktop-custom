@@ -252,7 +252,7 @@ jobs:
 
     windows:
         name: Package Windows x64
-        needs: webapp
+        needs: [webapp, app-audio]
         runs-on: windows-2025
         defaults:
             run:
@@ -304,8 +304,15 @@ jobs:
                   name: webapp
                   path: build/webapp
 
-            - name: Apply Mosaix branding and web app
-              run: node scripts/prepare-desktop.mjs build/element-web/apps/desktop --webapp build/webapp
+            - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+              with:
+                  name: app-audio
+                  path: build/app-audio
+
+            - name: Apply Mosaix branding, web app and app audio
+              run: >
+                  node scripts/prepare-desktop.mjs build/element-web/apps/desktop
+                  --webapp build/webapp --app-audio build/app-audio
 
             - name: Install dependencies
               working-directory: build/element-web/apps/desktop
@@ -329,6 +336,12 @@ jobs:
                   VERSION: ${{ steps.version.outputs.version }}
                   # No code signing certificate: build an unsigned app
                   CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+            - name: Check the packaged app audio module
+              working-directory: build/element-web/apps/desktop/dist
+              run: |
+                  test -f win-unpacked/resources/app-audio/app_audio.node
+                  test -f win-unpacked/resources/app-audio/lib/index.cjs
 
             - name: Checksums
               working-directory: build/element-web/apps/desktop/dist

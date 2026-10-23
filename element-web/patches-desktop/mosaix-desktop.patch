@@ -1,42 +1,91 @@
 diff --git a/apps/desktop/src/electron-main.ts b/apps/desktop/src/electron-main.ts
-index 3ecb63d..1ace271 100644
+index 3ecb63d..e366ae9 100644
 --- a/apps/desktop/src/electron-main.ts
 +++ b/apps/desktop/src/electron-main.ts
-@@ -40,6 +40,7 @@ import * as updater from "./updater.js";
+@@ -22,6 +22,7 @@ import {
+     protocol,
+     desktopCapturer,
+ } from "electron";
++import * as electronModule from "electron";
+ import * as Sentry from "@sentry/electron/main";
+ import path from "node:path";
+ import windowStateKeeper from "electron-window-state";
+@@ -40,6 +41,7 @@ import * as updater from "./updater.js";
  import ProtocolHandler from "./protocol.js";
  import { _t, AppLocalization } from "./language-helper.js";
  import { setDisplayMediaCallback } from "./displayMediaCallback.js";
-+import { withSystemAudio } from "./systemAudio.js";
++import { initAppAudio, withScreenShareAudio } from "./screenShareAudio.js";
  import { setupMacosTitleBar } from "./macos-titlebar.js";
  import { setupMediaAuth } from "./media-auth.js";
  import { handleWindowClose, revealMainWindow } from "./window-close.js";
-@@ -369,7 +370,7 @@ app.on("ready", async () => {
+@@ -368,8 +370,13 @@ app.on("ready", async () => {
+     // renderer stays a permanent blank window the user can only escape by killing the whole app.
      rendererRecovery = setupRendererRecovery(global.mainWindow);
  
++    // [mosaix] Sound for screen sharing, shipped next to the app
++    initAppAudio(
++        app.isPackaged ? path.join(process.resourcesPath, "app-audio") : path.join(app.getAppPath(), "app-audio"),
++    );
++
      session.defaultSession.setDisplayMediaRequestHandler(
 -        (_, callback) => {
 +        (request, callback) => {
              if (process.env.XDG_SESSION_TYPE === "wayland") {
                  // On Wayland, calling getSources() opens the xdg-desktop-portal picker.
                  // The user can only select a single source there, so Electron will return an array with exactly one entry.
-@@ -388,7 +389,10 @@ app.on("ready", async () => {
+@@ -388,7 +395,20 @@ app.on("ready", async () => {
              } else {
                  global.mainWindow?.webContents.send("openDesktopCapturerSourcePicker");
              }
 -            setDisplayMediaCallback(callback);
-+            // [mosaix] Include the system audio if the call asked for audio
-+            setDisplayMediaCallback((streams) =>
-+                callback(withSystemAudio(streams, request.audioRequested, process.platform)),
-+            );
++            // [mosaix] Add the sound if the call asked for it: the shared
++            // application's, or the system's without Mosaix
++            setDisplayMediaCallback((streams) => {
++                withScreenShareAudio(streams, {
++                    audioRequested: request.audioRequested,
++                    platform: process.platform,
++                    electron: electronModule,
++                    ownPid: process.pid,
++                    requestFrame: request.frame,
++                }).then(callback, (e) => {
++                    console.error("Screen share sound failed", e);
++                    callback(streams);
++                });
++            });
          },
          { useSystemPicker: true },
      ); // Use Mac OS 15+ native picker
-diff --git a/apps/desktop/src/systemAudio.test.ts b/apps/desktop/src/systemAudio.test.ts
+diff --git a/apps/desktop/src/ipc.ts b/apps/desktop/src/ipc.ts
+index 2b47b1e..b8be153 100644
+--- a/apps/desktop/src/ipc.ts
++++ b/apps/desktop/src/ipc.ts
+@@ -10,6 +10,7 @@ import { app, autoUpdater, desktopCapturer, ipcMain, powerSaveBlocker, TouchBar,
+ import IpcMainEvent = Electron.IpcMainEvent;
+ import { randomArray } from "./utils.js";
+ import { consumeDisplayMediaCallback } from "./displayMediaCallback.js";
++import { stopScreenShareAudio } from "./screenShareAudio.js";
+ import Store, { clearData } from "./store.js";
+ import { getConfig } from "./config.js";
+ 
+@@ -167,6 +168,12 @@ ipcMain.on("ipcCall", async function (_ev: IpcMainEvent, payload) {
+                 ret = [];
+             }
+             break;
++        // [mosaix] Element Call stopped sharing the screen
++        case "mosaixScreenShareStopped":
++            stopScreenShareAudio();
++            ret = null;
++            break;
++
+         case "callDisplayMediaCallback":
+             consumeDisplayMediaCallback()?.({ video: args[0] });
+             ret = null;
+diff --git a/apps/desktop/src/screenShareAudio.test.ts b/apps/desktop/src/screenShareAudio.test.ts
 new file mode 100644
-index 0000000..d55c556
+index 0000000..4515672
 --- /dev/null
-+++ b/apps/desktop/src/systemAudio.test.ts
-@@ -0,0 +1,33 @@
++++ b/apps/desktop/src/screenShareAudio.test.ts
+@@ -0,0 +1,70 @@
 +/*
 +Copyright 2026 Mosaix contributors.
 +
@@ -44,38 +93,75 @@ index 0000000..d55c556
 +Please see LICENSE in the repository root for full details.
 +*/
 +
-+import { describe, expect, it } from "vitest";
-+import type { Streams } from "electron";
++import { describe, expect, it, vi } from "vitest";
++import type * as Electron from "electron";
++import type { Streams, WebFrameMain } from "electron";
 +
-+import { withSystemAudio } from "./systemAudio.js";
++import { type AppAudio, withScreenShareAudio } from "./screenShareAudio.js";
 +
++const window440 = { video: { id: "window:11:0", name: "Player" } } as Streams;
 +const screen = { video: { id: "screen:0:0", name: "Entire screen" } } as Streams;
++const playerFrame = { name: "player" } as unknown as WebFrameMain;
 +
-+describe("withSystemAudio", () => {
-+    it("shares the system audio on Windows when the call asks for audio", () => {
-+        expect(withSystemAudio(screen, true, "win32")).toEqual({ ...screen, audio: "loopback" });
++function appAudio(supported = true, frame: WebFrameMain | null = playerFrame): AppAudio {
++    return { isSupported: () => supported, start: vi.fn().mockResolvedValue(frame), stop: vi.fn() };
++}
++
++const options = (overrides: object = {}) => ({
++    audioRequested: true,
++    platform: "win32" as NodeJS.Platform,
++    electron: {} as typeof Electron,
++    ownPid: 1000,
++    requestFrame: null,
++    ...overrides,
++});
++
++describe("withScreenShareAudio", () => {
++    it("adds the captured sound of the chosen source", async () => {
++        const module = appAudio();
++        expect(await withScreenShareAudio(window440, options({ appAudio: module }))).toEqual({
++            ...window440,
++            audio: playerFrame,
++        });
++        expect(module.start).toHaveBeenCalledWith(
++            expect.objectContaining({ sourceId: "window:11:0", ownPid: 1000 }),
++        );
++        expect(await withScreenShareAudio(screen, options({ appAudio: module }))).toEqual({
++            ...screen,
++            audio: playerFrame,
++        });
 +    });
 +
-+    it("shares no audio when the call doesn't ask for it", () => {
-+        expect(withSystemAudio(screen, false, "win32")).toEqual(screen);
++    it("adds no sound when there is nothing to capture (e.g. Mosaix's own window)", async () => {
++        expect(await withScreenShareAudio(window440, options({ appAudio: appAudio(true, null) }))).toEqual(window440);
 +    });
 +
-+    it("shares no audio where Electron can't capture it", () => {
-+        expect(withSystemAudio(screen, true, "linux")).toEqual(screen);
-+        expect(withSystemAudio(screen, true, "darwin")).toEqual(screen);
++    it("falls back to the whole system's sound on older Windows", async () => {
++        expect(await withScreenShareAudio(screen, options({ appAudio: appAudio(false) }))).toEqual({
++            ...screen,
++            audio: "loopback",
++        });
++        expect(await withScreenShareAudio(screen, options({ appAudio: null }))).toEqual({
++            ...screen,
++            audio: "loopback",
++        });
 +    });
 +
-+    it("adds nothing when the picker was cancelled", () => {
++    it("adds no sound when the call doesn't ask for it, off Windows, or when cancelled", async () => {
++        const module = appAudio();
++        expect(await withScreenShareAudio(screen, options({ appAudio: module, audioRequested: false }))).toEqual(screen);
++        expect(await withScreenShareAudio(screen, options({ appAudio: module, platform: "linux" }))).toEqual(screen);
 +        const cancelled = { video: { id: "", name: "" } } as Streams;
-+        expect(withSystemAudio(cancelled, true, "win32")).toEqual(cancelled);
++        expect(await withScreenShareAudio(cancelled, options({ appAudio: module }))).toEqual(cancelled);
++        expect(module.start).not.toHaveBeenCalled();
 +    });
 +});
-diff --git a/apps/desktop/src/systemAudio.ts b/apps/desktop/src/systemAudio.ts
+diff --git a/apps/desktop/src/screenShareAudio.ts b/apps/desktop/src/screenShareAudio.ts
 new file mode 100644
-index 0000000..f6e1e17
+index 0000000..c51de55
 --- /dev/null
-+++ b/apps/desktop/src/systemAudio.ts
-@@ -0,0 +1,23 @@
++++ b/apps/desktop/src/screenShareAudio.ts
+@@ -0,0 +1,80 @@
 +/*
 +Copyright 2026 Mosaix contributors.
 +
@@ -83,19 +169,76 @@ index 0000000..f6e1e17
 +Please see LICENSE in the repository root for full details.
 +*/
 +
-+import type { Streams } from "electron";
++// [mosaix] Sound for screen sharing on Windows (see desktop/app-audio in the
++// Mosaix repository): sharing a window adds the sound of that application
++// only, sharing a screen adds the system's sound without Mosaix itself, so
++// nobody hears the call twice.
++
++import type * as Electron from "electron";
++import type { Streams, WebFrameMain } from "electron";
++import { createRequire } from "node:module";
++import fs from "node:fs";
++import path from "node:path";
++
++export interface AppAudio {
++    isSupported(): boolean;
++    start(options: {
++        electron: typeof Electron;
++        sourceId: string;
++        ownPid: number;
++        requestFrame: WebFrameMain | null;
++    }): Promise<WebFrameMain | null>;
++    stop(): void;
++}
++
++let appAudio: AppAudio | null = null;
++
++/** Loads the app audio module shipped next to the app, if present. */
++export function initAppAudio(dir: string): void {
++    const entry = path.join(dir, "lib", "index.cjs");
++    if (!fs.existsSync(entry)) return;
++    try {
++        appAudio = createRequire(import.meta.url)(entry) as AppAudio;
++    } catch (e) {
++        console.error("Could not load the app audio module", e);
++    }
++}
++
++/** Ends the sound of the current screen share (the call says when it stops). */
++export function stopScreenShareAudio(): void {
++    appAudio?.stop();
++}
++
++export interface ScreenShareAudioOptions {
++    audioRequested: boolean;
++    platform: NodeJS.Platform;
++    electron: typeof Electron;
++    ownPid: number;
++    requestFrame: WebFrameMain | null;
++    /** For tests */
++    appAudio?: AppAudio | null;
++}
 +
 +/**
-+ * [mosaix] Adds the system audio to a chosen screen share source when the web
-+ * content asked for audio (Element Call does when "Share audio" is on).
-+ *
-+ * Electron can only capture the whole system's audio ("loopback"), and only on
-+ * Windows; there is no way to capture a single application's audio.
++ * Adds the sound to a chosen screen share source when the call asked for it
++ * (Element Call's "Share audio").
 + */
-+export function withSystemAudio(streams: Streams, audioRequested: boolean, platform: NodeJS.Platform): Streams {
++export async function withScreenShareAudio(streams: Streams, options: ScreenShareAudioOptions): Promise<Streams> {
++    const audioModule = options.appAudio !== undefined ? options.appAudio : appAudio;
 +    const video = streams.video;
 +    // A cancelled picker returns a dummy source without an id
-+    const chosen = video !== undefined && "id" in video && typeof video.id === "string" && video.id !== "";
-+    if (!audioRequested || platform !== "win32" || !chosen) return streams;
++    const sourceId = video !== undefined && "id" in video && typeof video.id === "string" ? video.id : "";
++    if (!options.audioRequested || options.platform !== "win32" || sourceId === "") return streams;
++
++    if (audioModule?.isSupported()) {
++        const audio = await audioModule.start({
++            electron: options.electron,
++            sourceId,
++            ownPid: options.ownPid,
++            requestFrame: options.requestFrame,
++        });
++        return audio ? { ...streams, audio } : streams;
++    }
++    // Windows before 10 2004: only the whole system's sound is possible
 +    return { ...streams, audio: "loopback" };
 +}
