@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- Copyright 2026 Mosaix contributors. SPDX-License-Identifier: AGPL-3.0-only -->
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Mosaix app audio harness</title>
+    </head>
+    <body>
+        <script>
+            const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+            function toneLevel(samples, frequency, rate = 48000) {
+                const k = (2 * Math.PI * frequency) / rate;
+                const coefficient = 2 * Math.cos(k);
+                let s1 = 0;
+                let s2 = 0;
+                for (const x of samples) {
+                    const s = x + coefficient * s1 - s2;
+                    s2 = s1;
+                    s1 = s;
+                }
+                return (2 * Math.sqrt(Math.max(s1 * s1 + s2 * s2 - coefficient * s1 * s2, 0))) / samples.length;
+            }
+
+            // This app's own sound (stands for the call's sound)
+            function startOwnTone(frequency) {
+                const c = new AudioContext();
+                const o = c.createOscillator();
+                o.frequency.value = frequency;
+                const g = c.createGain();
+                g.gain.value = 0.5;
+                o.connect(g).connect(c.destination);
+                o.start();
+                return c.resume();
+            }
+
+            // Shares the screen (the main process picks the source) and measures the tones in its sound
+            async function measureShare() {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                const [track] = stream.getAudioTracks();
+                if (!track) {
+                    stream.getTracks().forEach((t) => t.stop());
+                    return { audioTrack: false };
+                }
+                const ctx = new AudioContext({ sampleRate: 48000 });
+                const source = ctx.createMediaStreamSource(new MediaStream([track]));
+                const recorder = ctx.createScriptProcessor(4096, 1, 1);
+                const chunks = [];
+                recorder.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+                const silent = ctx.createGain();
+                silent.gain.value = 0;
+                source.connect(recorder).connect(silent).connect(ctx.destination);
+                await sleep(3500);
+                stream.getTracks().forEach((t) => t.stop());
+                await ctx.close();
+                const all = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
+                let o = 0;
+                for (const c of chunks) {
+                    all.set(c, o);
+                    o += c.length;
+                }
+                const signal = all.subarray(24000); // skip the start
+                const round = (v) => Math.round(v * 1000) / 1000;
+                return {
+                    audioTrack: true,
+                    samples: signal.length,
+                    t440: round(toneLevel(signal, 440)),
+                    t660: round(toneLevel(signal, 660)),
+                    t880: round(toneLevel(signal, 880)),
+                };
+            }
+        </script>
+    </body>
+</html>
