@@ -1,9 +1,10 @@
 // Copyright 2026 Mosaix contributors.
 // SPDX-License-Identifier: AGPL-3.0-only
 //
-// The native module on Windows (needs an audio output device): two processes
-// play different tones; capturing one process includes only its tone,
-// excluding it captures the other one.
+// The native module on Windows (needs an audio output device): two
+// applications (separate Electron processes, like most chat/media apps) play
+// different tones; capturing one includes only its tone, excluding it
+// captures the other one.
 
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -12,6 +13,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { leftChannel, toneLevel, writeToneWav } from "./tones.mjs";
@@ -21,9 +23,15 @@ const windows = process.platform === "win32";
 const native = windows ? require("../build/Release/app_audio.node") : null;
 
 const players = {};
+let soundPlayer = null;
 
+function toneApp(frequency) {
+    const tone = fileURLToPath(new URL("./electron/tone.cjs", import.meta.url));
+    return spawn(require("electron"), [tone, String(frequency)], { stdio: "ignore" });
+}
+
+// A process playing a WAV file with Windows' PlaySound (System.Media.SoundPlayer)
 function playLooped(file) {
-    // SoundPlayer plays in the PowerShell process itself
     const script = `$p = New-Object System.Media.SoundPlayer '${file}'; $p.PlayLooping(); Start-Sleep -Seconds 120`;
     return spawn("powershell.exe", ["-NoProfile", "-Command", script], { stdio: "ignore" });
 }
@@ -47,17 +55,12 @@ async function captureFor(pid, mode, ms = 2500) {
 
 before(async () => {
     if (!windows) return;
-    const dir = mkdtempSync(path.join(tmpdir(), "app-audio-"));
-    for (const f of [440, 880]) {
-        const file = path.join(dir, `tone-${f}.wav`);
-        writeToneWav(file, f);
-        players[f] = playLooped(file);
-    }
-    await sleep(3000);
+    for (const f of [440, 880]) players[f] = toneApp(f);
+    await sleep(5000);
 });
 
 after(() => {
-    for (const p of Object.values(players)) p.kill();
+    for (const p of [...Object.values(players), soundPlayer]) p?.kill();
 });
 
 test("process loopback is available", { skip: !windows }, () => {
@@ -82,4 +85,24 @@ test("exclude: everything but that process", { skip: !windows }, async () => {
 test("rejects bad arguments", { skip: !windows }, () => {
     assert.throws(() => new native.Capture(0, "include", () => {}, () => {}));
     assert.throws(() => new native.Capture(1, "both", () => {}, () => {}));
+});
+
+// Measured, not asserted: excluding a process that plays with PlaySound
+// (winmm) did not remove its sound on the Windows CI runner, while including
+// it captured exactly its sound. Mosaix only ever excludes itself (Electron),
+// which the Electron test checks.
+test("PlaySound process (measured only)", { skip: !windows }, async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "app-audio-"));
+    const file = path.join(dir, "tone-660.wav");
+    writeToneWav(file, 660);
+    soundPlayer = playLooped(file);
+    await sleep(3000);
+    const chunks = [];
+    for (const mode of ["include", "exclude"]) {
+        const capture = new native.Capture(soundPlayer.pid, mode, (c) => chunks.push([mode, c]), () => {});
+        await sleep(2500);
+        capture.stop();
+        const signal = leftChannel(chunks.filter(([m]) => m === mode).map(([, c]) => c)).subarray(24000);
+        console.log(`PlaySound ${mode}: 660 Hz level`, toneLevel(signal, 660));
+    }
 });
