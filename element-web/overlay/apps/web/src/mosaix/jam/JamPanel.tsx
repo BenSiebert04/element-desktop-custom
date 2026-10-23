@@ -14,7 +14,16 @@ import { useMatrixClientContext } from "../../contexts/MatrixClientContext";
 import { useTypedEventEmitter } from "../../hooks/useEventEmitter";
 import MemberAvatar from "../../components/views/avatars/MemberAvatar";
 import { usePrivateVoiceRoom } from "../private-voice/usePrivateVoiceRoom";
-import { activeJams, endedJamContent, isJamUrl, type Jam, JAM_EVENT_TYPE, jamContent } from "./jam";
+import {
+    activeJams,
+    endedJamContent,
+    isJamUrl,
+    type Jam,
+    JAM_EVENT_TYPE,
+    JAM_POLICY_EVENT_TYPE,
+    jamContent,
+    jamStateKey,
+} from "./jam";
 
 /** Re-renders every minute (for "running for … minutes"). */
 function useMinuteClock(): number {
@@ -32,7 +41,7 @@ export function useActiveJams(room: Room): Jam[] {
     useEffect(() => setJams(activeJams(room)), [room]);
     const update = useCallback(() => setJams(activeJams(room)), [room]);
     useTypedEventEmitter(room, RoomStateEvent.Events, (event) => {
-        if (event.getType() === JAM_EVENT_TYPE) update();
+        if (event.getType() === JAM_EVENT_TYPE || event.getType() === JAM_POLICY_EVENT_TYPE) update();
     });
     useTypedEventEmitter(room, RoomStateEvent.Members, update);
     return jams;
@@ -46,7 +55,7 @@ function JamCard({ room, jam, own, now }: { room: Room; jam: Jam; own: boolean; 
     const end = async (): Promise<void> => {
         setBusy(true);
         try {
-            await client.sendStateEvent(room.roomId, JAM_EVENT_TYPE as any, endedJamContent(), jam.userId);
+            await client.sendStateEvent(room.roomId, JAM_EVENT_TYPE as any, endedJamContent(), jamStateKey(jam.userId));
         } finally {
             setBusy(false);
         }
@@ -98,7 +107,12 @@ function ShareForm({ room, onDone }: { room: Room; onDone: () => void }): JSX.El
         setError(null);
         try {
             const userId = client.getSafeUserId();
-            await client.sendStateEvent(room.roomId, JAM_EVENT_TYPE as any, jamContent(link, title), userId);
+            await client.sendStateEvent(
+                room.roomId,
+                JAM_EVENT_TYPE as any,
+                jamContent(link, title),
+                jamStateKey(userId),
+            );
             onDone();
         } catch {
             setError(_t("mosaix|jam|share_failed"));

@@ -84,19 +84,37 @@ for key, name, kind, cat, matrix_only, media, enc in [
     rooms[key] = {"room_id": rid, "name": name, "kind": kind, "category_id": categories[cat][0],
                   "matrix_only": matrix_only, "bridged_media": media, "expected_matrix_encryption": enc}
 
-# Jam channel: members may share their Spotify Jam (state event per member)
+# Jam channel: members may share their Spotify Jam (state event per member,
+# key "jam/" + Matrix ID); the room's policy names the checking service
 JAM_TYPE = "io.github.bensiebert04.mosaix.jam"
+JAM_POLICY_TYPE = "io.github.bensiebert04.mosaix.jam.policy"
+CHECKER = "@pvcheck:" + SERVER
+checker = login("pvcheck")
 jam_room = req("POST", "/_matrix/client/v3/createRoom", {
-    "name": "matrix-jams", "preset": "private_chat", "invite": ["@pvben:" + SERVER],
-    "power_level_content_override": {"events": {**CALL_PL["events"], JAM_TYPE: 0}}}, anna)["room_id"]
-req("POST", f"/_matrix/client/v3/rooms/{urllib.parse.quote(jam_room)}/join", {}, ben)
+    "name": "matrix-jams", "preset": "private_chat", "invite": ["@pvben:" + SERVER, CHECKER],
+    "power_level_content_override": {"events": {**CALL_PL["events"], JAM_TYPE: 0, JAM_POLICY_TYPE: 100}}},
+    anna)["room_id"]
+for token in (ben, checker):
+    req("POST", f"/_matrix/client/v3/rooms/{urllib.parse.quote(jam_room)}/join", {}, token)
+req("PUT", f"/_matrix/client/v3/rooms/{urllib.parse.quote(jam_room)}/state/{JAM_POLICY_TYPE}/",
+    {"checker": CHECKER}, anna)
 add_child(categories["general"][0], jam_room)
 rooms["jams"] = {"room_id": jam_room, "name": "🎵 Jams", "kind": "jam", "category_id": categories["general"][0],
                  "matrix_only": True, "bridged_media": [], "expected_matrix_encryption": "none"}
+
+
+def put_jam(owner, content, token):
+    key = urllib.parse.quote("jam/" + owner, safe="")
+    return req("PUT", f"/_matrix/client/v3/rooms/{urllib.parse.quote(jam_room)}/state/{JAM_TYPE}/{key}",
+               content, token)
+
+
 # Ben is running a Jam
-req("PUT", f"/_matrix/client/v3/rooms/{urllib.parse.quote(jam_room)}/state/{JAM_TYPE}/{urllib.parse.quote('@pvben:' + SERVER)}",
-    {"url": "https://open.spotify.com/socialsession/BenJam42", "title": "Bens Abendmix",
-     "started_ts": int(time.time() * 1000) - 7 * 60000, "status": "active"}, ben)
+put_jam("@pvben:" + SERVER, {"url": "https://open.spotify.com/socialsession/BenJam42", "title": "Bens Abendmix",
+                             "started_ts": int(time.time() * 1000) - 7 * 60000, "status": "active"}, ben)
+# Ben under Anna's key: not Anna's Jam, never shown
+put_jam("@pvanna:" + SERVER, {"url": "https://open.spotify.com/socialsession/Fake1", "title": "Gefälscht",
+                              "started_ts": int(time.time() * 1000), "status": "active"}, ben)
 
 lobby = create("Unverwaltete Lobby", invite=["@pvben:" + SERVER])
 add_child(space, lobby)
