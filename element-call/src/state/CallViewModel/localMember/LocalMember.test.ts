@@ -1060,7 +1060,8 @@ describe("LocalMembership", () => {
       expect(setScreenShareEnabled).toHaveBeenCalledWith(
         true,
         expect.any(Object),
-        undefined,
+        // [element-custom] The shared sound is sent as stereo music
+        expect.objectContaining({ dtx: false, forceStereo: true }),
       );
       expect(localMembership.screenShareError$.value).toBe(error);
 

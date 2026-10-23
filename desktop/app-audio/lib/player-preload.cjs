@@ -30,6 +30,14 @@ const node = context.audioWorklet
         return player;
     });
 
+// How the jitter buffer is doing (for tests and diagnosis)
+ipcRenderer.on("mosaix-app-audio-stats", () => {
+    void node.then((player) => {
+        player.port.onmessage = (message) => ipcRenderer.send("mosaix-app-audio-stats", message.data);
+        player.port.postMessage("stats");
+    });
+});
+
 ipcRenderer.on("mosaix-app-audio-port", (event) => {
     const [port] = event.ports;
     void node.then((player) => {

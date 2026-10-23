@@ -59,9 +59,21 @@ Electron kann einer Bildschirmfreigabe nur den kompletten Systemton
 - **`lib/index.cjs`**: Fenster geteilt → `include` mit dem Prozess des
   Fensters; Bildschirm geteilt → `exclude` mit Mosaix selbst; Mosaix-Fenster
   → kein Ton. Die Aufnahme wird in einem unsichtbaren Player-Fenster
-  abgespielt (AudioWorklet mit kleinem Puffer), und genau dieses Fenster gibt
-  Electron als Tonquelle der Freigabe an (`audio: webFrameMain`). Während es
-  aufgenommen wird, ist es lokal stumm.
+  abgespielt (AudioWorklet), und genau dieses Fenster gibt Electron als
+  Tonquelle der Freigabe an (`audio: webFrameMain`). Während es aufgenommen
+  wird, ist es lokal stumm.
+- **Jitter-Puffer** (`lib/player-worklet.js`): Die Aufnahme kommt über den
+  Hauptprozess, dessen Ereignisschleife kurz hängen kann, und ihr Takt ist
+  nicht der des Players. Start nach 100 ms Puffer; über 160 ms wird pro
+  128 Samples eines ausgelassen, unter 60 ms eines doppelt gespielt
+  (unhörbar statt Knacken); nur im Notfall Stille bzw. Verwerfen über 400 ms.
+- **Ton wie er ist:** Element Call fordert den Freigabe-Ton ohne
+  Sprachverarbeitung an (`echoCancellation`, `noiseSuppression`,
+  `autoGainControl` aus, Stereo). Sonst behandelt Chromium ihn wie ein
+  Mikrofon: Mono, Rauschunterdrückung und Pegelautomatik machen aus Musik
+  und Spielton pumpendes Rauschen. Gesendet wird er als Musik
+  (`musicHighQualityStereo`, 128 kbit/s Stereo, ohne DTX, das Pausen durch
+  Komfortrauschen ersetzt).
 - **Ende:** Element Call meldet das Ende der Freigabe über die IPC-Brücke von
   Element Web (`mosaixScreenShareStopped`); zusätzlich endet die Aufnahme,
   sobald das Player-Fenster nicht mehr aufgenommen wird oder der Anruf weg

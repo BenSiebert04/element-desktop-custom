@@ -93,6 +93,23 @@ function isActive() {
 }
 
 /**
+ * How the player's jitter buffer is doing (for tests and diagnosis):
+ * underruns, trims, skipped/repeated frames and buffered frames, or null.
+ */
+function stats() {
+    const player = active?.player;
+    if (!player || player.isDestroyed()) return Promise.resolve(null);
+    return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(null), 2000);
+        player.webContents.ipc.once("mosaix-app-audio-stats", (_event, data) => {
+            clearTimeout(timer);
+            resolve(data);
+        });
+        player.webContents.send("mosaix-app-audio-stats");
+    });
+}
+
+/**
  * Starts capturing the sound for a chosen screen share source.
  *
  * @param {object} options
@@ -168,4 +185,4 @@ async function start({ electron, sourceId, ownPid, requestFrame }) {
     return player.webContents.mainFrame;
 }
 
-module.exports = { isSupported, start, stop, isActive, captureTarget, windowHandle };
+module.exports = { isSupported, start, stop, isActive, stats, captureTarget, windowHandle };
