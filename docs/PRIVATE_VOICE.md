@@ -70,6 +70,31 @@ Alle optional:
   `spaces: []`) entfernt nur die Darstellung; Chatverlauf und Mitgliedschaft
   bleiben.
 
+## Jam-Kanal (Spotify Jam)
+
+Ein Raum mit `"kind": "jam"` im Manifest ist ein Jam-Kanal. Oben im Kanal
+zeigt Mosaix, wer gerade einen **Spotify Jam** laufen hat (Name, Titel, seit
+wann), mit **Beitreten**-Button. Der Button öffnet den Jam-Link in Spotify; den
+Rest (gleicher Song, gleiche Stelle, Überspringen für alle) macht Spotify
+selbst. In der Raumliste steht beim Kanal die Zahl laufender Jams
+(„♪ 2 live“). Jam-Kanäle haben keine Anruf-Buttons.
+
+- **Teilen:** „Meinen Jam teilen“ → Link aus Spotify einfügen (Jam →
+  Einladen → Link teilen), optional ein Titel. Angenommen werden nur
+  `https://open.spotify.com/socialsession/…` und `https://spotify.link/…`.
+- **Beenden:** „Jam beenden“ beim eigenen Eintrag.
+- **Daten:** State-Event `io.github.bensiebert04.mosaix.jam` mit der eigenen
+  Matrix-ID als State-Key:
+  `{"url", "title", "started_ts", "status": "active" | "ended", "checked_ts", "ended_reason"}`.
+  Mosaix zeigt nur Einträge mit `status: "active"`, gültigem Link, Absender =
+  State-Key und Mitgliedschaft im Raum. Titel sind reiner Text (max. 80
+  Zeichen).
+- **Server:** legt den Kanal an (State-Event für Mitglieder erlaubt), prüft die
+  Links und setzt beendete Jams auf `"ended"`. Keine Spotify-Developer-App,
+  keine Spotify-Konten auf dem Server.
+- **Spotify:** Den Jam startet der Gastgeber (Premium); wer beitreten kann,
+  regelt Spotify.
+
 ## Robustheit
 
 - Unbekannte oder neuere `schema_version`, falsche `user_id` oder kaputte

@@ -32,7 +32,7 @@ Nutzung auf eigene Verantwortung, ohne Gewährleistung (siehe [LICENSE](LICENSE)
 ## Dokumentation
 
 - Architektur und Designentscheidungen: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- Private Voice (Kategorien, Text-/Sprachräume): [docs/PRIVATE_VOICE.md](docs/PRIVATE_VOICE.md)
+- Private Voice (Kategorien, Text-/Sprachräume, Spotify-Jam-Kanal): [docs/PRIVATE_VOICE.md](docs/PRIVATE_VOICE.md)
 - Installation, Anmeldung, Bedienung: [docs/INSTALL.md](docs/INSTALL.md)
 - Upstream-Updates einspielen: [docs/UPDATING.md](docs/UPDATING.md)
 - Tests und bekannte Einschränkungen: [docs/TESTING.md](docs/TESTING.md)
