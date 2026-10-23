@@ -1,0 +1,102 @@
+/*
+Copyright 2026 Mosaix contributors.
+
+SPDX-License-Identifier: AGPL-3.0-only
+Please see LICENSE in the repository root for full details.
+*/
+
+.mx_JamPanel {
+    margin: var(--cpd-space-3x) var(--cpd-space-4x) 0;
+    padding: var(--cpd-space-3x) var(--cpd-space-4x);
+    border: 1px solid var(--cpd-color-border-interactive-secondary);
+    border-radius: 12px;
+    background: var(--cpd-color-bg-subtle-secondary);
+}
+
+.mx_JamPanel_header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cpd-space-3x);
+
+    h2 {
+        margin: 0;
+        font: var(--cpd-font-body-lg-semibold);
+    }
+}
+
+.mx_JamPanel_list {
+    list-style: none;
+    margin: var(--cpd-space-3x) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-2x);
+}
+
+.mx_JamPanel_card {
+    display: flex;
+    align-items: center;
+    gap: var(--cpd-space-3x);
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    border-radius: 8px;
+    background: var(--cpd-color-bg-canvas-default);
+}
+
+.mx_JamPanel_cardText {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mx_JamPanel_name {
+    font: var(--cpd-font-body-md-semibold);
+}
+
+.mx_JamPanel_title {
+    font: var(--cpd-font-body-md-regular);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mx_JamPanel_meta,
+.mx_JamPanel_hint,
+.mx_JamPanel_empty {
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-secondary);
+}
+
+.mx_JamPanel_empty,
+.mx_JamPanel_hint {
+    margin: var(--cpd-space-2x) 0 0;
+}
+
+.mx_JamPanel_form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cpd-space-2x);
+    margin-top: var(--cpd-space-2x);
+}
+
+.mx_JamPanel_input {
+    padding: var(--cpd-space-2x) var(--cpd-space-3x);
+    border: 1px solid var(--cpd-color-border-interactive-primary);
+    border-radius: 8px;
+    background: var(--cpd-color-bg-canvas-default);
+    color: var(--cpd-color-text-primary);
+    font: var(--cpd-font-body-md-regular);
+}
+
+.mx_JamPanel_error {
+    margin: 0;
+    font: var(--cpd-font-body-sm-regular);
+    color: var(--cpd-color-text-critical-primary);
+}
+
+.mx_JamPanel_formActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--cpd-space-2x);
+}

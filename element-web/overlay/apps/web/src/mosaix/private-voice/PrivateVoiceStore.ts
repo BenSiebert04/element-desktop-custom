@@ -144,9 +144,15 @@ export class PrivateVoiceStore extends AsyncStoreWithClient<EmptyObject> {
         return this.roomsById.get(roomId) ?? null;
     }
 
+    /** Text channels without call buttons (jam channels never have calls). */
     public isManagedTextRoom(roomId: string): boolean {
         const room = this.getRoom(roomId);
+        if (room?.kind === "jam") return true;
         return room?.kind === "text" && !this.currentConfig!.ui.showCallControlsInTextRooms;
+    }
+
+    public isManagedJamRoom(roomId: string): boolean {
+        return this.getRoom(roomId)?.kind === "jam";
     }
 
     public isManagedVoiceRoom(roomId: string): boolean {

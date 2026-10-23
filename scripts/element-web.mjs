@@ -31,7 +31,7 @@ const DESKTOP_PATCH_FILE = "mosaix-desktop.patch";
 /** Element Desktop code we change (new files included). */
 const DESKTOP_PATHS = ["apps/desktop/src"];
 /** Our new code lives here in the checkout; it is copied, not patched. */
-const OVERLAY_PATHS = ["apps/web/src/mosaix"];
+const OVERLAY_PATHS = ["apps/web/src/mosaix", "apps/web/res/css/mosaix"];
 /** Never part of the patch (local install workarounds must not leak into the build). */
 const EXCLUDED = [":(exclude)package.json", ":(exclude)**/package.json", ":(exclude)pnpm-lock.yaml", ":(exclude)apps/desktop"];
 

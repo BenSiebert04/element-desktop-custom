@@ -1,3 +1,36 @@
+diff --git a/apps/web/res/css/_components.pcss b/apps/web/res/css/_components.pcss
+index eaf1643..914965a 100644
+--- a/apps/web/res/css/_components.pcss
++++ b/apps/web/res/css/_components.pcss
+@@ -53,6 +53,7 @@
+ @import "./components/views/typography/_Caption.pcss";
+ @import "./compound/_Icon.pcss";
+ @import "./compound/_SuccessDialog.pcss";
++@import "./mosaix/_JamPanel.pcss";
+ @import "./structures/_AutoHideScrollbar.pcss";
+ @import "./structures/_AutocompleteInput.pcss";
+ @import "./structures/_CompatibilityPage.pcss";
+diff --git a/apps/web/src/components/structures/RoomView.tsx b/apps/web/src/components/structures/RoomView.tsx
+index b470287..efd0850 100644
+--- a/apps/web/src/components/structures/RoomView.tsx
++++ b/apps/web/src/components/structures/RoomView.tsx
+@@ -104,6 +104,7 @@ import TopUnreadMessagesBar from "../views/rooms/TopUnreadMessagesBar";
+ import { fetchInitialEvent } from "../../utils/EventUtils";
+ import { type ComposerInsertPayload, ComposerType } from "../../dispatcher/payloads/ComposerInsertPayload";
+ import AppsDrawer from "../views/rooms/AppsDrawer";
++import { JamPanel } from "../../mosaix/jam/JamPanel";
+ import { RightPanelPhases } from "../../stores/right-panel/RightPanelStorePhases";
+ import { type ActionPayload } from "../../dispatcher/payloads";
+ import { KeyBindingAction } from "../../accessibility/KeyboardShortcuts";
+@@ -2675,6 +2676,8 @@ export class RoomView extends React.Component<IRoomProps, IRoomState> {
+                     <RoomUploadContextProvider>
+                         <Measured sensor={this.roomViewBody} onMeasurement={this.onMeasurement} />
+                         {auxPanel}
++                        {/* [mosaix] Spotify Jams of a jam channel */}
++                        <JamPanel room={this.state.room} />
+                         {pinnedMessageBanner}
+                         <main className={timelineClasses} data-testid="timeline">
+                             <FileDropTarget parent={this.roomView.current} />
 diff --git a/apps/web/src/components/views/rooms/RoomHeader/RoomHeader.tsx b/apps/web/src/components/views/rooms/RoomHeader/RoomHeader.tsx
 index de7fedb..0f5a508 100644
 --- a/apps/web/src/components/views/rooms/RoomHeader/RoomHeader.tsx
@@ -51,14 +84,40 @@ index de7fedb..0f5a508 100644
                                  <StatusTextView status={dmUserStatus} className="mx_RoomHeader_userStatus" />
                              )}
 diff --git a/apps/web/src/i18n/strings/de_DE.json b/apps/web/src/i18n/strings/de_DE.json
-index 18964a2..3cfb813 100644
+index 18964a2..ba92f98 100644
 --- a/apps/web/src/i18n/strings/de_DE.json
 +++ b/apps/web/src/i18n/strings/de_DE.json
-@@ -1689,6 +1689,21 @@
+@@ -1689,6 +1689,47 @@
          "toast_description": "%(brand)s ist in mobilen Browsern experimentell. Für eine bessere Erfahrung nutze unsere App.",
          "toast_title": "Nutze die App für eine bessere Erfahrung"
      },
 +    "mosaix": {
++        "jam": {
++            "empty": "Gerade läuft kein Jam. Starte einen in Spotify und teile ihn hier.",
++            "end": "Jam beenden",
++            "invalid_link": "Das ist kein Spotify-Jam-Link. In Spotify: Jam → Einladen → Link teilen.",
++            "join": "Beitreten",
++            "link": "Jam-Link",
++            "running": {
++                "one": "%(count)s Jam läuft",
++                "other": "%(count)s Jams laufen"
++            },
++            "running_minutes": {
++                "one": "Läuft seit %(count)s Minute",
++                "other": "Läuft seit %(count)s Minuten"
++            },
++            "running_short": {
++                "one": "♪ %(count)s live",
++                "other": "♪ %(count)s live"
++            },
++            "share": "Teilen",
++            "share_failed": "Der Jam konnte nicht geteilt werden. Bitte erneut versuchen.",
++            "share_hint": "Starte in Spotify einen Jam und füge hier seinen Link ein (Jam → Einladen → Link teilen).",
++            "share_own": "Meinen Jam teilen",
++            "title": "Titel",
++            "title_panel": "Spotify-Jams",
++            "title_placeholder": "Titel (optional), z. B. Chill-Abend"
++        },
 +        "private_voice": {
 +            "bridged_audio": "Discord: Audio",
 +            "bridged_audio_tooltip": "Sprache wird mit Discord geteilt. Video und Bildschirmfreigabe bleiben in Matrix.",
@@ -77,14 +136,40 @@ index 18964a2..3cfb813 100644
      "no_more_results": "Keine weiteren Ergebnisse",
      "notif_panel": {
 diff --git a/apps/web/src/i18n/strings/en_EN.json b/apps/web/src/i18n/strings/en_EN.json
-index ed8155c..e2b42b9 100644
+index ed8155c..60a78e6 100644
 --- a/apps/web/src/i18n/strings/en_EN.json
 +++ b/apps/web/src/i18n/strings/en_EN.json
-@@ -1710,6 +1710,21 @@
+@@ -1710,6 +1710,47 @@
          "toast_description": "%(brand)s is experimental on a mobile web browser. For a better experience and the latest features, use our free native app.",
          "toast_title": "Use app for a better experience"
      },
 +    "mosaix": {
++        "jam": {
++            "empty": "Nobody is running a Jam right now. Start one in Spotify and share it here.",
++            "end": "End Jam",
++            "invalid_link": "This isn't a Spotify Jam link. In Spotify: Jam → Invite → Share link.",
++            "join": "Join",
++            "link": "Jam link",
++            "running": {
++                "one": "%(count)s Jam running",
++                "other": "%(count)s Jams running"
++            },
++            "running_minutes": {
++                "one": "Running for %(count)s minute",
++                "other": "Running for %(count)s minutes"
++            },
++            "running_short": {
++                "one": "♪ %(count)s live",
++                "other": "♪ %(count)s live"
++            },
++            "share": "Share",
++            "share_failed": "Couldn't share the Jam. Please try again.",
++            "share_hint": "Start a Jam in Spotify, then paste its link (Jam → Invite → Share link).",
++            "share_own": "Share my Jam",
++            "title": "Title",
++            "title_panel": "Spotify Jams",
++            "title_placeholder": "Title (optional), e.g. Chill evening"
++        },
 +        "private_voice": {
 +            "bridged_audio": "Discord: audio",
 +            "bridged_audio_tooltip": "Voice is shared with Discord. Video and screen sharing stay within Matrix.",
@@ -382,29 +467,53 @@ index f6b3884..e004cd9 100644
              vi.spyOn(SettingsStore, "getValue").mockReturnValue(true);
              vi.spyOn(MessagePreviewStore.instance, "getPreviewForRoom").mockResolvedValue({
 diff --git a/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts b/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
-index 32bcb06..8e15b8c 100644
+index 32bcb06..b7b1e0c 100644
 --- a/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
 +++ b/apps/web/src/viewmodels/room-list/RoomListItemViewModel.ts
-@@ -5,6 +5,9 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
+@@ -5,6 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Com
  Please see LICENSE files in the repository root for full details.
  */
  
 +import { getManagedRoomName, isVirtualManagedSection } from "../../mosaix/private-voice/roomList";
 +import { PrivateVoiceStore } from "../../mosaix/private-voice/PrivateVoiceStore";
 +import { UPDATE_EVENT } from "../../stores/AsyncStore";
++import { JAM_EVENT_TYPE } from "../../mosaix/jam/jam";
  import {
      BaseViewModel,
      RoomNotifState,
-@@ -134,6 +137,8 @@ export class RoomListItemViewModel
+@@ -13,7 +17,7 @@ import {
+     type Section,
+     type UserStatus,
+ } from "@element-hq/web-shared-components";
+-import { ClientEvent, KnownMembership, RoomEvent } from "matrix-js-sdk/src/matrix";
++import { ClientEvent, KnownMembership, RoomEvent, RoomStateEvent, type MatrixEvent } from "matrix-js-sdk/src/matrix";
+ import { CallType } from "matrix-js-sdk/src/webrtc/call";
+ import { logger } from "matrix-js-sdk/src/logger";
+ 
+@@ -134,6 +138,10 @@ export class RoomListItemViewModel
          // Subscribe to room-specific events
          this.disposables.trackListener(props.room, RoomEvent.Name, this.onRoomChanged);
          this.disposables.trackListener(props.room, RoomEvent.Tags, this.onRoomChanged);
 +        // [mosaix] The managed name can change at any time with the configuration
 +        this.disposables.trackListener(PrivateVoiceStore.instance, UPDATE_EVENT, this.onRoomChanged);
++        // [mosaix] A jam channel's name shows how many Jams are running
++        this.disposables.trackListener(props.room, RoomStateEvent.Events, this.onRoomStateEvent);
  
          // Rebuild the available sections when their order changes or when one is created/renamed/removed
          const orderSectionsRef = SettingsStore.watchSetting("RoomList.OrderedCustomSections", null, () =>
-@@ -388,7 +393,8 @@ export class RoomListItemViewModel
+@@ -239,6 +247,11 @@ export class RoomListItemViewModel
+         this.updateItem();
+     };
+ 
++    // [mosaix]
++    private onRoomStateEvent = (...args: unknown[]): void => {
++        if ((args[0] as MatrixEvent).getType() === JAM_EVENT_TYPE) this.updateItem();
++    };
++
+     /**
+      * Update the item snapshot with current sync data.
+      * Preserves the message preview which is managed separately.
+@@ -388,7 +401,8 @@ export class RoomListItemViewModel
          return {
              id: room.roomId,
              room,
@@ -414,7 +523,7 @@ index 32bcb06..8e15b8c 100644
              isBold: notifState.hasAnyNotificationOrActivity,
              messagePreview,
              notification: {
-@@ -535,6 +541,8 @@ export class RoomListItemViewModel
+@@ -535,6 +549,8 @@ export class RoomListItemViewModel
                  // Exclude the Chats because the user toggle the other sections to move rooms in and out of the Chats section.
                  // Also exclude the default sections because they are available as toggles in the main context menu, and we don't want them to be duplicated in the "Move to section" submenu.
                  .filter((tag) => !isDefaultSectionTag(tag))
