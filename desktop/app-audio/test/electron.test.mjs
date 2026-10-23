@@ -24,21 +24,33 @@ test("screen share sound in Electron", { skip: !windows, timeout: 120000 }, () =
     assert.equal(r.error, undefined);
     assert.equal(r.supported, true);
 
-    // The captured level of a tone varies between runs (0.03 to 0.1), while
-    // sound that must not be captured measures 0: "heard" means clearly above
-    // silence, "not heard" at most a tenth of what is heard.
-    const HEARD = 0.01;
+    // The tone apps and this app play their tones at 0.5. "Heard" means
+    // at least 0.35 in the median 100 ms block, "not heard" below 0.02.
+    // "Clean": the tones make up at least 90 % of the sound in nearly every
+    // block, i.e. no noise, no cracks, no dropouts; and the player's jitter
+    // buffer never ran dry or had to drop sound.
+    const HEARD = 0.35;
+    const SILENT = 0.02;
+    const clean = (share, what) => {
+        assert.ok(share.cleanMedian > 0.95, `${what}: clean sound (${share.cleanMedian})`);
+        assert.ok(share.unclean <= 2, `${what}: at most 2 of ${share.blocks} blocks with noise (${share.unclean})`);
+        assert.equal(share.channels, 2, `${what}: stereo`);
+        assert.equal(share.player?.underruns, 0, `${what}: the player never ran dry`);
+        assert.equal(share.player?.trims, 0, `${what}: the player never dropped sound`);
+    };
 
     // Sharing the window of the 440 Hz app: only its sound
     assert.equal(r.window.audioTrack, true);
     assert.ok(r.window.t440 > HEARD, "the shared app is heard");
-    assert.ok(r.window.t880 < r.window.t440 / 10, "another app is not");
-    assert.ok(r.window.t660 < r.window.t440 / 10, "the call (this app) is not");
+    assert.ok(r.window.t880 < SILENT, "another app is not");
+    assert.ok(r.window.t660 < SILENT, "the call (this app) is not");
+    clean(r.window, "window");
 
     // Sharing the screen: every app, but not this one
     assert.equal(r.screen.audioTrack, true);
     assert.ok(r.screen.t440 > HEARD && r.screen.t880 > HEARD, "all other apps are heard");
-    assert.ok(r.screen.t660 < Math.min(r.screen.t440, r.screen.t880) / 10, "the call is not heard twice");
+    assert.ok(r.screen.t660 < SILENT, "the call is not heard twice");
+    clean(r.screen, "screen");
 
     // The capture ends with the screen share
     assert.equal(r.windowCaptureStopped, true);

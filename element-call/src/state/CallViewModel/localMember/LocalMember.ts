@@ -87,6 +87,7 @@ import {
   screenShareAudio,
   screenShareMode,
   withScreenShareAudio,
+  withScreenShareAudioPublish,
   withScreenShareMode,
 } from "../../../custom-layout/screenShareMode.ts";
 import { notifyDesktopScreenShareStopped } from "../../../custom-layout/desktopBridge.ts";
@@ -919,7 +920,8 @@ export const createLocalMembership$ = ({
         participant.setScreenShareEnabled(
           targetScreenshareState,
           captureOptions,
-          modePublishOptions,
+          // [element-custom] The shared sound as stereo music
+          withScreenShareAudioPublish(modePublishOptions),
         ),
         targetScreenshareState,
         logger,

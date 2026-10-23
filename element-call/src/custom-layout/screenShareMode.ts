@@ -18,6 +18,8 @@ Please see LICENSE in the repository root for full details.
  */
 
 import {
+  type AudioCaptureOptions,
+  AudioPresets,
   type LocalVideoTrack,
   type ScreenShareCaptureOptions,
   type TrackPublishOptions,
@@ -49,14 +51,44 @@ export const screenShareAudio = new Setting<boolean>(
   true,
 );
 
+/**
+ * The shared sound as it is: in stereo and without the processing meant for
+ * a microphone. (Chromium otherwise applies echo cancellation, noise
+ * suppression and automatic gain to it and mixes it down to mono, which
+ * turns music and game sound into pumping noise.)
+ */
+export const SCREEN_SHARE_AUDIO_CAPTURE: AudioCaptureOptions = {
+  echoCancellation: false,
+  noiseSuppression: false,
+  autoGainControl: false,
+  voiceIsolation: false,
+  channelCount: 2,
+};
+
 /** Asks for the sound along with the screen, or explicitly not. */
 export function withScreenShareAudio(
   capture: ScreenShareCaptureOptions,
   enabled: boolean,
 ): ScreenShareCaptureOptions {
   return enabled
-    ? { ...capture, systemAudio: "include" }
+    ? { ...capture, audio: SCREEN_SHARE_AUDIO_CAPTURE, systemAudio: "include" }
     : { ...capture, audio: false, systemAudio: "exclude" };
+}
+
+/**
+ * Sends the shared sound as music: stereo at high quality, and without DTX
+ * (which replaces quiet passages by comfort noise, meant for speech pauses).
+ * Only affects the screen share's audio track.
+ */
+export function withScreenShareAudioPublish(
+  publish: TrackPublishOptions | undefined,
+): TrackPublishOptions {
+  return {
+    ...publish,
+    audioPreset: AudioPresets.musicHighQualityStereo,
+    dtx: false,
+    forceStereo: true,
+  };
 }
 
 /** The mode to use, falling back to `standard` for unknown stored values. */

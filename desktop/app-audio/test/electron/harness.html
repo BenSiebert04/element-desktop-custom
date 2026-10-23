@@ -9,17 +9,46 @@
         <script>
             const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-            function toneLevel(samples, frequency, rate = 48000) {
-                const k = (2 * Math.PI * frequency) / rate;
-                const coefficient = 2 * Math.cos(k);
-                let s1 = 0;
-                let s2 = 0;
-                for (const x of samples) {
-                    const s = x + coefficient * s1 - s2;
-                    s2 = s1;
-                    s1 = s;
+            // Amplitude of a tone in a block, allowing for a slightly different
+            // clock (±3 Hz): a clean tone measures its amplitude in every block
+            function blockLevel(x, frequency, rate) {
+                let best = 0;
+                for (let df = -3; df <= 3; df += 0.5) {
+                    const k = (2 * Math.PI * (frequency + df)) / rate;
+                    const c = 2 * Math.cos(k);
+                    let s1 = 0;
+                    let s2 = 0;
+                    for (const v of x) {
+                        const s = v + c * s1 - s2;
+                        s2 = s1;
+                        s1 = s;
+                    }
+                    best = Math.max(best, (2 * Math.sqrt(Math.max(s1 * s1 + s2 * s2 - c * s1 * s2, 0))) / x.length);
                 }
-                return (2 * Math.sqrt(Math.max(s1 * s1 + s2 * s2 - coefficient * s1 * s2, 0))) / samples.length;
+                return best;
+            }
+
+            // Per 100 ms block: the level of each tone and how much of the
+            // block's power the tones make up (the rest is noise or cracks)
+            function analyse(signal, frequencies, rate = 48000) {
+                const size = rate / 10;
+                const blocks = [];
+                for (let b = 0; b + size <= signal.length; b += size) {
+                    const x = signal.subarray(b, b + size);
+                    const levels = frequencies.map((f) => blockLevel(x, f, rate));
+                    let power = 0;
+                    for (const v of x) power += v * v;
+                    power /= x.length;
+                    const tonePower = levels.reduce((p, l) => p + (l * l) / 2, 0);
+                    blocks.push({ levels, clean: power > 1e-6 ? tonePower / power : 1 });
+                }
+                const median = (values) => values.sort((a, b) => a - b)[values.length >> 1];
+                const round = (v) => Math.round(v * 1000) / 1000;
+                const result = { blocks: blocks.length };
+                frequencies.forEach((f, i) => (result[`t${f}`] = round(median(blocks.map((b) => b.levels[i])))));
+                result.cleanMedian = round(median(blocks.map((b) => b.clean)));
+                result.unclean = blocks.filter((b) => b.clean < 0.9).length;
+                return result;
             }
 
             // This app's own sound (stands for the call's sound)
@@ -34,9 +63,14 @@
                 return c.resume();
             }
 
-            // Shares the screen (the main process picks the source) and measures the tones in its sound
+            // Shares the screen (the main process picks the source) and measures
+            // the tones in its sound, taken as Mosaix takes it: without voice
+            // processing, in stereo
             async function measureShare() {
-                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
+                });
                 const [track] = stream.getAudioTracks();
                 if (!track) {
                     stream.getTracks().forEach((t) => t.stop());
@@ -50,7 +84,7 @@
                 const silent = ctx.createGain();
                 silent.gain.value = 0;
                 source.connect(recorder).connect(silent).connect(ctx.destination);
-                await sleep(3500);
+                await sleep(5000);
                 stream.getTracks().forEach((t) => t.stop());
                 await ctx.close();
                 const all = new Float32Array(chunks.reduce((n, c) => n + c.length, 0));
@@ -59,14 +93,10 @@
                     all.set(c, o);
                     o += c.length;
                 }
-                const signal = all.subarray(24000); // skip the start
-                const round = (v) => Math.round(v * 1000) / 1000;
                 return {
                     audioTrack: true,
-                    samples: signal.length,
-                    t440: round(toneLevel(signal, 440)),
-                    t660: round(toneLevel(signal, 660)),
-                    t880: round(toneLevel(signal, 880)),
+                    channels: track.getSettings().channelCount,
+                    ...analyse(all.subarray(48000), [440, 660, 880]), // skip the first second
                 };
             }
         </script>

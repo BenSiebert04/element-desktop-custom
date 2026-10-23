@@ -16,7 +16,9 @@ import {
   currentScreenShareMode,
   screenShareAudio,
   screenShareMode,
+  SCREEN_SHARE_AUDIO_CAPTURE,
   withScreenShareAudio,
+  withScreenShareAudioPublish,
   withScreenShareMode,
 } from "./screenShareMode";
 import { ScreenShareModeButton } from "./ScreenShareModeButton";
@@ -154,15 +156,36 @@ describe("screen sharing modes", () => {
 
 describe("sharing the sound", () => {
   it("asks for the sound with the screen, or explicitly not", () => {
-    const audio = { autoGainControl: false };
+    const audio = { autoGainControl: true };
     expect(withScreenShareAudio({ audio }, true)).toEqual({
-      audio,
+      audio: SCREEN_SHARE_AUDIO_CAPTURE,
       systemAudio: "include",
     });
     expect(withScreenShareAudio({ audio }, false)).toEqual({
       audio: false,
       systemAudio: "exclude",
     });
+  });
+
+  it("takes the sound as it is, without voice processing, in stereo", () => {
+    expect(SCREEN_SHARE_AUDIO_CAPTURE).toEqual({
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      voiceIsolation: false,
+      channelCount: 2,
+    });
+  });
+
+  it("sends the sound as stereo music without DTX", () => {
+    const publish = withScreenShareAudioPublish({ dtx: true, simulcast: true });
+    expect(publish).toMatchObject({
+      dtx: false,
+      forceStereo: true,
+      simulcast: true,
+      audioPreset: { maxBitrate: 128_000 },
+    });
+    expect(withScreenShareAudioPublish(undefined).dtx).toBe(false);
   });
 
   it("is on by default and can be switched off in the menu", async () => {

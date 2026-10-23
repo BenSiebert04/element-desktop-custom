@@ -20,6 +20,14 @@ app.commandLine.appendSwitch("autoplay-policy", "no-user-gesture-required");
 
 let choose = null;
 
+/** Measures a share, and how the player's jitter buffer did meanwhile. */
+async function measure(win) {
+    const result = win.webContents.executeJavaScript("measureShare()");
+    await sleep(4500);
+    const player = await appAudio.stats();
+    return { ...(await result), player };
+}
+
 async function stoppedAfterShare() {
     for (let i = 0; i < 12; i++) {
         if (!appAudio.isActive()) return true;
@@ -53,11 +61,11 @@ app.whenReady().then(async () => {
         await win.webContents.executeJavaScript("startOwnTone(660)");
 
         choose = (sources) => sources.find((s) => s.name === "Mosaix Tone 440");
-        results.window = await win.webContents.executeJavaScript("measureShare()");
+        results.window = await measure(win);
         results.windowCaptureStopped = await stoppedAfterShare();
 
         choose = (sources) => sources.find((s) => s.id.startsWith("screen:"));
-        results.screen = await win.webContents.executeJavaScript("measureShare()");
+        results.screen = await measure(win);
         results.screenCaptureStopped = await stoppedAfterShare();
     } catch (e) {
         results.error = String(e?.stack ?? e);
